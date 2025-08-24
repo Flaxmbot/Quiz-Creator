@@ -22,6 +22,19 @@ export default function ResultsPage() {
   const [copied, setCopied] = useState(false);
   const { toast } = useToast();
 
+  // Helper function to safely convert submittedAt to Date
+  const getSubmittedDate = (submittedAt: Date | any) => {
+    if (submittedAt instanceof Date) {
+      return submittedAt;
+    }
+    // Handle Firebase Timestamp
+    if (submittedAt && typeof submittedAt.toDate === 'function') {
+      return submittedAt.toDate();
+    }
+    // Fallback to current date if invalid
+    return new Date();
+  };
+
   useEffect(() => {
     const fetchQuizData = async () => {
       if (typeof quizId !== 'string') return;
@@ -103,19 +116,22 @@ export default function ResultsPage() {
     );
   }
 
-  const averageScore = results.length > 0
-    ? results.reduce((acc, r) => acc + r.score, 0) / results.length
-    : 0;
-    
-  const maxScore = results.length > 0 ? Math.max(...results.map(r => r.score)) : 0;
-  const minScore = results.length > 0 ? Math.min(...results.map(r => r.score)) : 0;
-  
-  const passRate = results.length > 0 
-    ? (results.filter(r => r.score >= 70).length / results.length) * 100 
+  const validResults = results.filter(r => r.score !== undefined);
+
+  const averageScore = validResults.length > 0
+    ? validResults.reduce((acc, r) => acc + (r.score || 0), 0) / validResults.length
     : 0;
 
-  const scoreDistribution = results.reduce((acc, r) => {
-    const scoreBand = Math.floor(r.score / 10) * 10;
+  const maxScore = validResults.length > 0 ? Math.max(...validResults.map(r => r.score || 0)) : 0;
+  const minScore = validResults.length > 0 ? Math.min(...validResults.map(r => r.score || 0)) : 0;
+
+  const passRate = validResults.length > 0
+    ? (validResults.filter(r => (r.score || 0) >= 70).length / validResults.length) * 100
+    : 0;
+
+  const scoreDistribution = validResults.reduce((acc, r) => {
+    const score = r.score || 0;
+    const scoreBand = Math.floor(score / 10) * 10;
     const band = `${scoreBand}-${scoreBand + 9}%`;
     acc[band] = (acc[band] || 0) + 1;
     return acc;
@@ -126,10 +142,10 @@ export default function ResultsPage() {
     .sort((a, b) => parseInt(a.name) - parseInt(b.name));
     
   const pieData = [
-    { name: 'Excellent (90-100%)', value: results.filter(r => r.score >= 90).length, color: '#10B981' },
-    { name: 'Good (80-89%)', value: results.filter(r => r.score >= 80 && r.score < 90).length, color: '#3B82F6' },
-    { name: 'Average (70-79%)', value: results.filter(r => r.score >= 70 && r.score < 80).length, color: '#F59E0B' },
-    { name: 'Below Average (<70%)', value: results.filter(r => r.score < 70).length, color: '#EF4444' }
+    { name: 'Excellent (90-100%)', value: validResults.filter(r => (r.score || 0) >= 90).length, color: '#10B981' },
+    { name: 'Good (80-89%)', value: validResults.filter(r => (r.score || 0) >= 80 && (r.score || 0) < 90).length, color: '#3B82F6' },
+    { name: 'Average (70-79%)', value: validResults.filter(r => (r.score || 0) >= 70 && (r.score || 0) < 80).length, color: '#F59E0B' },
+    { name: 'Below Average (<70%)', value: validResults.filter(r => (r.score || 0) < 70).length, color: '#EF4444' }
   ].filter(item => item.value > 0);
   
   const getScoreColor = (score: number) => {
@@ -316,7 +332,7 @@ export default function ResultsPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {results.sort((a, b) => b.score - a.score).slice(0, 10).map((result, index) => (
+            {validResults.sort((a, b) => (b.score || 0) - (a.score || 0)).slice(0, 10).map((result, index) => (
               <div key={result.id} className="flex items-center justify-between p-4 rounded-xl bg-muted/20 hover:bg-muted/30 transition-colors duration-200 border border-border/20">
                 <div className="flex items-center gap-4">
                   <div className={`flex items-center justify-center w-10 h-10 rounded-full font-bold text-sm ${
@@ -333,13 +349,13 @@ export default function ResultsPage() {
                   <div>
                     <p className="font-semibold text-lg">{result.userName}</p>
                     <p className="text-sm text-muted-foreground">
-                      Submitted {new Date(result.submittedAt).toLocaleDateString()}
+                      Submitted {getSubmittedDate(result.submittedAt).toLocaleDateString()}
                     </p>
                   </div>
                 </div>
                 <div className="text-right">
-                  <Badge className={`text-lg px-4 py-2 ${getScoreBadgeColor(result.score)}`}>
-                    {result.score.toFixed(1)}%
+                  <Badge className={`text-lg px-4 py-2 ${getScoreBadgeColor(result.score || 0)}`}>
+                    {(result.score || 0).toFixed(1)}%
                   </Badge>
                 </div>
               </div>
@@ -359,19 +375,19 @@ export default function ResultsPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3 max-h-96 overflow-y-auto custom-scrollbar">
-              {results.sort((a, b) => b.score - a.score).map((result, index) => (
+              {validResults.sort((a, b) => (b.score || 0) - (a.score || 0)).map((result, index) => (
                 <div key={result.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/10 hover:bg-muted/20 transition-colors duration-200">
                   <div className="flex items-center gap-3">
                     <span className="text-sm font-medium text-muted-foreground w-8">#{index + 1}</span>
                     <div>
                       <p className="font-medium">{result.userName}</p>
                       <p className="text-sm text-muted-foreground">
-                        {new Date(result.submittedAt).toLocaleDateString()}
+                        {getSubmittedDate(result.submittedAt).toLocaleDateString()}
                       </p>
                     </div>
                   </div>
-                  <Badge className={getScoreBadgeColor(result.score)}>
-                    {result.score.toFixed(1)}%
+                  <Badge className={getScoreBadgeColor(result.score || 0)}>
+                    {(result.score || 0).toFixed(1)}%
                   </Badge>
                 </div>
               ))}

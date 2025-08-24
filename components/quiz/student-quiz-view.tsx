@@ -32,7 +32,42 @@ export function StudentQuizView({ quizId }: { quizId: string }) {
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [isFinished, setIsFinished] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [startTime] = useState(new Date());
+  const [startTime, setStartTime] = useState<Date | null>(null);
+
+  // Load quiz session data from localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const sessionKey = `quiz_session_${quizId}`;
+      const savedSession = localStorage.getItem(sessionKey);
+      
+      if (savedSession) {
+        try {
+          const session = JSON.parse(savedSession);
+          setCurrentQuestionIndex(session.currentQuestionIndex || 0);
+          setAnswers(session.answers || {});
+          setStartTime(new Date(session.startTime));
+          // timeLeft will be calculated in fetchQuiz based on elapsed time
+        } catch (error) {
+          console.error('Failed to parse saved session:', error);
+          localStorage.removeItem(sessionKey);
+        }
+      }
+    }
+  }, [quizId]);
+
+  // Save quiz session data to localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined' && startTime && !isFinished) {
+      const sessionKey = `quiz_session_${quizId}`;
+      const sessionData = {
+        currentQuestionIndex,
+        answers,
+        startTime: startTime.toISOString(),
+        quizId
+      };
+      localStorage.setItem(sessionKey, JSON.stringify(sessionData));
+    }
+  }, [currentQuestionIndex, answers, startTime, quizId, isFinished]);
 
   useEffect(() => {
     async function fetchQuiz() {
@@ -49,8 +84,46 @@ export function StudentQuizView({ quizId }: { quizId: string }) {
             return;
           }
           setQuiz(quizData);
+          
+          // Handle timing logic with persistence
           if (quizData.timeLimit) {
-            setTimeLeft(quizData.timeLimit * 60);
+            const sessionKey = `quiz_session_${quizId}`;
+            const savedSession = localStorage.getItem(sessionKey);
+            
+            if (savedSession) {
+              try {
+                const session = JSON.parse(savedSession);
+                const sessionStartTime = new Date(session.startTime);
+                const elapsed = Math.floor((Date.now() - sessionStartTime.getTime()) / 1000);
+                const remainingTime = Math.max(0, (quizData.timeLimit * 60) - elapsed);
+                
+                if (remainingTime <= 0) {
+                  // Time is up, auto-submit
+                  setTimeLeft(0);
+                  setTimeout(() => {
+                    if (!isFinished && !isSubmitting) {
+                      handleSubmit();
+                    }
+                  }, 100);
+                } else {
+                  setTimeLeft(remainingTime);
+                }
+              } catch (error) {
+                console.error('Failed to calculate remaining time:', error);
+                // Start fresh
+                const newStartTime = new Date();
+                setStartTime(newStartTime);
+                setTimeLeft(quizData.timeLimit * 60);
+              }
+            } else {
+              // First time taking the quiz
+              const newStartTime = new Date();
+              setStartTime(newStartTime);
+              setTimeLeft(quizData.timeLimit * 60);
+            }
+          } else if (!startTime) {
+            // No time limit, but set start time for tracking
+            setStartTime(new Date());
           }
         } else {
           setError("Quiz not found.");
@@ -93,6 +166,20 @@ export function StudentQuizView({ quizId }: { quizId: string }) {
 
     return () => clearInterval(timer);
   }, [timeLeft, isFinished]);
+
+  // Warn user before leaving the page during quiz
+  useEffect(() => {
+    if (!isFinished && !isLoading) {
+      const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+        e.preventDefault();
+        e.returnValue = 'Your quiz progress will be saved, but you may lose time. Are you sure you want to leave?';
+        return e.returnValue;
+      };
+
+      window.addEventListener('beforeunload', handleBeforeUnload);
+      return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    }
+  }, [isFinished, isLoading]);
   
   if (isLoading) {
     return (
@@ -160,7 +247,7 @@ export function StudentQuizView({ quizId }: { quizId: string }) {
         }
       }
       
-      const timeSpent = Math.floor((new Date().getTime() - startTime.getTime()) / 1000);
+      const timeSpent = startTime ? Math.floor((new Date().getTime() - startTime.getTime()) / 1000) : 0;
       const finalScore = totalPoints > 0 ? (score / totalPoints) * 100 : 0;
       
       await submitQuiz({
@@ -174,6 +261,12 @@ export function StudentQuizView({ quizId }: { quizId: string }) {
         timeSpent: timeSpent,
         isCompleted: true,
       });
+      
+      // Clear the session data after successful submission
+      if (typeof window !== 'undefined') {
+        const sessionKey = `quiz_session_${quizId}`;
+        localStorage.removeItem(sessionKey);
+      }
       
       toast({
         title: "Quiz Submitted Successfully",

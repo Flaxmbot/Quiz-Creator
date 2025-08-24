@@ -3,11 +3,11 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { AlertCircle } from "lucide-react";
 import { PageLayout } from "@/components/layout/page-layout";
 
-export default function TakeQuizPage({ params }: { params: { quizId: string } }) {
-  // In a real app, you would fetch quiz data from Firestore using params.quizId
-  // For now, we'll use a mock quiz object for demonstration.
+export default async function TakeQuizPage({ params }: { params: Promise<{ quizId: string }> }) {
+  // In Next.js 15, params is now a Promise that needs to be awaited
+  const { quizId } = await params;
 
-  if (!params.quizId) {
+  if (!quizId) {
     return (
       <PageLayout>
         <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
@@ -32,7 +32,7 @@ export default function TakeQuizPage({ params }: { params: { quizId: string } })
 
   return (
     <PageLayout>
-      <StudentQuizView quizId={params.quizId} />
+      <StudentQuizView quizId={quizId} />
     </PageLayout>
   );
 }

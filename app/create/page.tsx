@@ -1,5 +1,20 @@
+import { Suspense } from "react";
 import { QuizForm } from "@/components/quiz/quiz-form";
 import { PageLayout } from "@/components/layout/page-layout";
+
+function QuizFormSkeleton() {
+  return (
+    <div className="space-y-8">
+      <div className="p-6 border rounded-lg bg-card">
+        <div className="space-y-4">
+          <div className="h-6 bg-muted rounded animate-pulse" />
+          <div className="h-4 bg-muted rounded animate-pulse w-3/4" />
+          <div className="h-10 bg-muted rounded animate-pulse" />
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function CreateQuizPage() {
   return (
@@ -13,7 +28,9 @@ export default function CreateQuizPage() {
             Fill in the details below and add your questions. Use the AI assistant to enhance your questions!
           </p>
         </div>
-        <QuizForm />
+        <Suspense fallback={<QuizFormSkeleton />}>
+          <QuizForm />
+        </Suspense>
       </div>
     </PageLayout>
   );
