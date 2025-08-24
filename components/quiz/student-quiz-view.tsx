@@ -315,17 +315,24 @@ export function StudentQuizView({ quizId }: { quizId: string }) {
         <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold">{quiz.title}</h1>
         <p className="text-sm sm:text-base text-muted-foreground mt-1">{quiz.description}</p>
         <div className="mt-3 sm:mt-4">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
-                <div className="flex-1 min-w-0">
-                    <Progress value={progress} className="h-2 sm:h-3" />
-                    <p className="text-xs sm:text-sm text-muted-foreground mt-1">Question {currentQuestionIndex + 1} of {quiz.questions.length}</p>
-                </div>
-                {timeLeft !== null && (
-                    <div className="flex items-center text-base sm:text-lg font-semibold text-primary whitespace-nowrap bg-primary/10 px-3 py-2 rounded-lg">
-                        <Clock className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
-                        <span>{Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}</span>
+            <div className="flex flex-col gap-3 sm:gap-4">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                        <div className="flex justify-between items-center mb-2">
+                            <span className="text-xs sm:text-sm text-muted-foreground">Progress</span>
+                            <span className="text-xs sm:text-sm font-medium text-primary">
+                                {currentQuestionIndex + 1} of {quiz.questions.length}
+                            </span>
+                        </div>
+                        <Progress value={progress} className="h-2 sm:h-3 w-full" />
                     </div>
-                )}
+                    {timeLeft !== null && (
+                        <div className="flex items-center justify-center text-base sm:text-lg font-semibold text-primary bg-primary/10 px-3 py-2 rounded-lg border border-primary/20 self-stretch sm:self-auto">
+                            <Clock className="mr-2 h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
+                            <span className="font-mono">{Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}</span>
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
       </header>
@@ -339,7 +346,7 @@ export function StudentQuizView({ quizId }: { quizId: string }) {
             {currentQuestion.type === "multiple-choice" && (
                 <div className="space-y-2 sm:space-y-3">
                     {currentQuestion.options.map(option => (
-                        <div key={option.id} className="flex items-start space-x-3 p-3 sm:p-4 border rounded-lg has-[:checked]:bg-primary/10 has-[:checked]:border-primary transition-all touch-manipulation">
+                        <div key={option.id} className="flex items-start gap-3 sm:gap-4 p-3 sm:p-4 border rounded-lg has-[:checked]:bg-primary/10 has-[:checked]:border-primary transition-all duration-200 touch-manipulation hover:bg-muted/30">
                             <Checkbox
                                 id={`${currentQuestion.id}-${option.id}`}
                                 onCheckedChange={(checked) => {
@@ -348,9 +355,14 @@ export function StudentQuizView({ quizId }: { quizId: string }) {
                                     handleAnswerChange(currentQuestion.id, newAnswers);
                                 }}
                                 checked={answers[currentQuestion.id]?.includes(option.id)}
-                                className="mt-0.5 h-5 w-5 sm:h-6 sm:w-6"
+                                className="mt-0.5 h-5 w-5 sm:h-6 sm:w-6 flex-shrink-0"
                             />
-                            <Label htmlFor={`${currentQuestion.id}-${option.id}`} className="text-sm sm:text-base cursor-pointer flex-1 leading-relaxed touch-target">{option.text}</Label>
+                            <Label 
+                                htmlFor={`${currentQuestion.id}-${option.id}`} 
+                                className="text-sm sm:text-base cursor-pointer flex-1 min-w-0 leading-relaxed touch-target break-words"
+                            >
+                                {option.text}
+                            </Label>
                         </div>
                     ))}
                 </div>
@@ -359,9 +371,18 @@ export function StudentQuizView({ quizId }: { quizId: string }) {
                 <RadioGroup onValueChange={(value) => handleAnswerChange(currentQuestion.id, value)} value={(answers[currentQuestion.id] || [])[0]}>
                     <div className="space-y-2 sm:space-y-3">
                     {currentQuestion.options.map(option => (
-                        <div key={option.id} className="flex items-start space-x-3 p-3 sm:p-4 border rounded-lg has-[:checked]:bg-primary/10 has-[:checked]:border-primary transition-all touch-manipulation">
-                            <RadioGroupItem value={option.id} id={`${currentQuestion.id}-${option.id}`} className="mt-0.5 h-5 w-5 sm:h-6 sm:w-6" />
-                            <Label htmlFor={`${currentQuestion.id}-${option.id}`} className="text-sm sm:text-base cursor-pointer flex-1 leading-relaxed touch-target">{option.text}</Label>
+                        <div key={option.id} className="flex items-start gap-3 sm:gap-4 p-3 sm:p-4 border rounded-lg has-[:checked]:bg-primary/10 has-[:checked]:border-primary transition-all duration-200 touch-manipulation hover:bg-muted/30">
+                            <RadioGroupItem 
+                                value={option.id} 
+                                id={`${currentQuestion.id}-${option.id}`} 
+                                className="mt-0.5 h-5 w-5 sm:h-6 sm:w-6 flex-shrink-0" 
+                            />
+                            <Label 
+                                htmlFor={`${currentQuestion.id}-${option.id}`} 
+                                className="text-sm sm:text-base cursor-pointer flex-1 min-w-0 leading-relaxed touch-target break-words"
+                            >
+                                {option.text}
+                            </Label>
                         </div>
                     ))}
                     </div>
@@ -377,43 +398,49 @@ export function StudentQuizView({ quizId }: { quizId: string }) {
                 />
             )}
           </CardContent>
-          <CardFooter className="flex flex-col sm:flex-row gap-3 sm:gap-0 sm:justify-between pt-4 sm:pt-6">
-            <Button
-                variant="outline"
-                onClick={handlePrev}
-                disabled={currentQuestionIndex === 0}
-                className="w-full sm:w-auto order-2 sm:order-1 touch-target"
-                size="sm"
-            >
-                <ArrowLeft className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
-                <span className="text-xs sm:text-sm">Previous</span>
-            </Button>
-            {currentQuestionIndex < quiz.questions.length - 1 ? (
-                 <Button
-                    onClick={handleNext}
-                    className="w-full sm:w-auto order-1 sm:order-2 touch-target"
-                    size="sm"
-                 >
-                    <span className="text-xs sm:text-sm">Next</span>
-                    <ArrowRight className="ml-2 h-3 w-3 sm:h-4 sm:w-4" />
-                </Button>
-            ) : (
-                <Button
-                    onClick={handleSubmit}
-                    className="bg-green-600 hover:bg-green-700 w-full sm:w-auto order-1 sm:order-2 touch-target"
-                    disabled={isSubmitting}
-                    size="sm"
-                >
-                    {isSubmitting ? (
-                      <>
-                        <Loader2 className="mr-2 h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
-                        <span className="text-xs sm:text-sm">Submitting...</span>
-                      </>
-                    ) : (
-                      <span className="text-xs sm:text-sm">Submit Quiz</span>
-                    )}
-                </Button>
-            )}
+          <CardFooter className="flex flex-col gap-3 sm:gap-4 pt-4 sm:pt-6">
+            <div className="flex flex-col sm:flex-row gap-3 sm:justify-between w-full">
+              <Button
+                  variant="outline"
+                  onClick={handlePrev}
+                  disabled={currentQuestionIndex === 0}
+                  className="w-full sm:w-auto sm:min-w-[120px] touch-target order-2 sm:order-1"
+                  size="sm"
+              >
+                  <ArrowLeft className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                  <span className="text-xs sm:text-sm">Previous</span>
+              </Button>
+              
+              {currentQuestionIndex < quiz.questions.length - 1 ? (
+                   <Button
+                      onClick={handleNext}
+                      className="w-full sm:w-auto sm:min-w-[120px] touch-target cyber-button order-1 sm:order-2"
+                      size="sm"
+                   >
+                      <span className="text-xs sm:text-sm">Next Question</span>
+                      <ArrowRight className="ml-2 h-3 w-3 sm:h-4 sm:w-4" />
+                  </Button>
+              ) : (
+                  <Button
+                      onClick={handleSubmit}
+                      className="bg-green-600 hover:bg-green-700 w-full sm:w-auto sm:min-w-[140px] touch-target order-1 sm:order-2"
+                      disabled={isSubmitting}
+                      size="sm"
+                  >
+                      {isSubmitting ? (
+                        <>
+                          <Loader2 className="mr-2 h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
+                          <span className="text-xs sm:text-sm">Submitting...</span>
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                          <span className="text-xs sm:text-sm">Submit Quiz</span>
+                        </>
+                      )}
+                  </Button>
+              )}
+            </div>
           </CardFooter>
         </Card>
       </main>

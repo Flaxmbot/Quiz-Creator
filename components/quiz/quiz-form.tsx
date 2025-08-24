@@ -18,12 +18,13 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useAuthState } from "react-firebase-hooks/auth";
 import { auth } from "@/lib/firebase";
-import { getQuiz } from "@/lib/firestore";
+import { getQuiz, getUserProfile } from "@/lib/firestore";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { GenerateQuizOutput } from "@/ai/flows/generate-quiz";
 import { QuizSettings } from "./quiz-settings";
 import { handleGenericError } from "@/lib/error-handling";
 import { createQuizAction, updateQuizAction } from "@/app/actions/quiz";
+import type { User } from "@/lib/types";
 
 const initialQuestionState: Question = {
   id: "",
@@ -43,9 +44,11 @@ export function QuizForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const editQuizId = searchParams.get('edit');
+  const duplicateQuizId = searchParams.get('duplicate');
+  const duplicateTitle = searchParams.get('title');
   const [isSaving, setIsSaving] = useState(false);
   const [isAIGeneratorOpen, setIsAIGeneratorOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(!!editQuizId);
+  const [isLoading, setIsLoading] = useState(!!editQuizId || !!duplicateQuizId);
 
   const [quiz, setQuiz] = useState<Omit<Quiz, "id" | "authorId" | "createdAt">>({
     title: "",
@@ -57,26 +60,44 @@ export function QuizForm() {
     randomizeQuestions: false,
   });
 
-  // Load existing quiz data for editing
+  // Load existing quiz data for editing or duplication
   useEffect(() => {
     async function loadQuiz() {
-      if (editQuizId && user) {
+      const quizIdToLoad = editQuizId || duplicateQuizId;
+      if (quizIdToLoad && user) {
         setIsLoading(true);
         try {
-          const existingQuiz = await getQuiz(editQuizId);
-          if (existingQuiz && existingQuiz.authorId === user.uid) {
+          const existingQuiz = await getQuiz(quizIdToLoad);
+          if (existingQuiz && (existingQuiz.authorId === user.uid || duplicateQuizId)) {
+            // For duplication, we need to generate new IDs for questions and options
+            const processedQuestions = duplicateQuizId ? existingQuiz.questions.map(question => ({
+              ...question,
+              id: `question-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+              options: question.options.map((option, index) => ({
+                ...option,
+                id: `option-${Date.now()}-${index}-${Math.random().toString(36).substr(2, 9)}`
+              }))
+            })) : existingQuiz.questions;
+
             setQuiz({
-              title: existingQuiz.title,
+              title: duplicateTitle || existingQuiz.title,
               description: existingQuiz.description,
-              questions: existingQuiz.questions,
+              questions: processedQuestions,
               timeLimit: existingQuiz.timeLimit,
-              isPublished: existingQuiz.isPublished || false,
+              isPublished: duplicateQuizId ? false : (existingQuiz.isPublished || false), // Duplicates are always unpublished
               allowRetakes: existingQuiz.allowRetakes || true,
               showCorrectAnswers: existingQuiz.showCorrectAnswers || true,
               randomizeQuestions: existingQuiz.randomizeQuestions || false,
               category: existingQuiz.category,
               tags: existingQuiz.tags,
             });
+            
+            if (duplicateQuizId) {
+              toast({
+                title: "Quiz Duplicated",
+                description: "Quiz has been loaded for duplication. Make your changes and save.",
+              });
+            }
           } else {
             toast({
               variant: "destructive",
@@ -102,7 +123,7 @@ export function QuizForm() {
     if (!loading) {
       loadQuiz();
     }
-  }, [editQuizId, user, loading, router, toast]);
+  }, [editQuizId, duplicateQuizId, duplicateTitle, user, loading, router, toast]);
 
   const handleQuizDetailChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -195,17 +216,18 @@ export function QuizForm() {
 
   const handleSave = async () => {
     if (!user) {
-        toast({ variant: "destructive", title: "Authentication Error", description: "You must be logged in to save a quiz." });
-        return;
+      toast({ variant: "destructive", title: "Error", description: "You must be logged in to save a quiz." });
+      return;
     }
-    // Client-side validation for immediate feedback
+
     if (!quiz.title) {
-        toast({ variant: "destructive", title: "Validation Error", description: "Quiz title cannot be empty." });
-        return;
+      toast({ variant: "destructive", title: "Error", description: "Quiz title is required." });
+      return;
     }
-     if (quiz.questions.length === 0) {
-        toast({ variant: "destructive", title: "Validation Error", description: "Please add at least one question." });
-        return;
+
+    if (quiz.questions.length === 0) {
+      toast({ variant: "destructive", title: "Error", description: "Please add at least one question." });
+      return;
     }
 
     setIsSaving(true);
@@ -263,27 +285,28 @@ export function QuizForm() {
       />
 
       <div className="p-4 sm:p-6 border rounded-lg bg-card">
-        <div className="space-y-4">
-          <div>
-            <Label htmlFor="title" className="text-base sm:text-lg">Quiz Title</Label>
+        <div className="space-y-4 sm:space-y-6">
+          <div className="space-y-2">
+            <Label htmlFor="title" className="text-base sm:text-lg font-semibold">Quiz Title</Label>
             <Input
               id="title"
               name="title"
               value={quiz.title}
               onChange={handleQuizDetailChange}
               placeholder="e.g., World History I"
-              className="mt-1"
+              className="w-full touch-target"
             />
           </div>
-          <div>
-            <Label htmlFor="description" className="text-base sm:text-lg">Description</Label>
+          <div className="space-y-2">
+            <Label htmlFor="description" className="text-base sm:text-lg font-semibold">Description</Label>
             <Textarea
               id="description"
               name="description"
               value={quiz.description}
               onChange={handleQuizDetailChange}
               placeholder="A brief description of what this quiz covers."
-              className="mt-1"
+              className="w-full min-h-[100px] touch-target resize-vertical"
+              rows={4}
             />
           </div>
         </div>
@@ -306,54 +329,72 @@ export function QuizForm() {
         ))}
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 sm:justify-between sm:items-center">
-        <div className="flex flex-col sm:flex-row gap-2 sm:gap-2 w-full sm:w-auto">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" disabled={isSaving} className="w-full sm:w-auto" size="sm">
-                <PlusCircle className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
-                <span className="text-xs sm:text-sm">Add Question</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuItem onClick={() => addQuestion("multiple-choice")}>
-                Multiple Choice
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => addQuestion("true-false")}>
-                True/False
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => addQuestion("short-answer")}>
-                Short Answer
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => addQuestion("fill-in-the-blank")}>
-                Fill in the Blank
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+      <div className="flex flex-col gap-4 sm:gap-6">
+        <div className="flex flex-col lg:flex-row gap-3 lg:gap-4">
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 flex-1">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" disabled={isSaving} className="w-full sm:flex-1 touch-target" size="sm">
+                  <PlusCircle className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                  <span className="text-xs sm:text-sm">Add Question</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-56">
+                <DropdownMenuItem onClick={() => addQuestion("multiple-choice")} className="touch-target">
+                  Multiple Choice
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => addQuestion("true-false")} className="touch-target">
+                  True/False
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => addQuestion("short-answer")} className="touch-target">
+                  Short Answer
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => addQuestion("fill-in-the-blank")} className="touch-target">
+                  Fill in the Blank
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
-          <Button
-            variant="outline"
-            onClick={() => setIsAIGeneratorOpen(true)}
-            disabled={isSaving}
-            className="border-primary text-primary hover:bg-primary hover:text-primary-foreground w-full sm:w-auto"
+            <Button
+              variant="outline"
+              onClick={() => setIsAIGeneratorOpen(true)}
+              disabled={isSaving}
+              className="border-primary text-primary hover:bg-primary hover:text-primary-foreground w-full sm:flex-1 touch-target"
+              size="sm"
+            >
+              <Wand2 className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="text-xs sm:text-sm">Generate with AI</span>
+            </Button>
+          </div>
+
+          <Button 
+            onClick={handleSave} 
+            disabled={isSaving || loading} 
+            className="w-full lg:w-auto lg:min-w-[140px] touch-target cyber-button" 
             size="sm"
           >
-            <Wand2 className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
-            <span className="text-xs sm:text-sm">Generate with AI</span>
+            {isSaving
+              ? (editQuizId ? "Updating..." : "Saving...")
+              : (
+                <>
+                  <Save className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                  <span className="text-xs sm:text-sm">{editQuizId ? "Update Quiz" : "Save Quiz"}</span>
+                </>
+              )
+            }
           </Button>
         </div>
-
-        <Button onClick={handleSave} disabled={isSaving || loading} className="w-full sm:w-auto touch-target" size="sm">
-          {isSaving
-            ? (editQuizId ? "Updating..." : "Saving...")
-            : (
-              <>
-                <Save className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
-                <span className="text-xs sm:text-sm">{editQuizId ? "Update Quiz" : "Save Quiz"}</span>
-              </>
-            )
-          }
-        </Button>
+        
+        {quiz.questions.length > 0 && (
+          <div className="text-center p-3 bg-muted/30 rounded-lg border border-dashed">
+            <p className="text-xs sm:text-sm text-muted-foreground">
+              <span className="font-semibold">{quiz.questions.length}</span> question{quiz.questions.length !== 1 ? 's' : ''} added
+              {quiz.questions.reduce((acc, q) => acc + q.points, 0) > 0 && (
+                <> • Total points: <span className="font-semibold">{quiz.questions.reduce((acc, q) => acc + q.points, 0)}</span></>
+              )}
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

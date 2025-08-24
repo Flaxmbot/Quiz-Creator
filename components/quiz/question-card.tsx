@@ -119,19 +119,29 @@ export function QuestionCard({
         onApply={applyAISuggestion}
         originalQuestion={question.text}
       />
-      <div className="flex justify-between items-start gap-2 mb-3 sm:mb-4">
-        <h3 className="text-base sm:text-lg font-semibold text-primary flex-1 min-w-0">
-          <span className="block sm:hidden">Q{index + 1}</span>
-          <span className="hidden sm:block">Question {index + 1}</span>
-          <span className="block text-xs sm:text-sm font-normal text-muted-foreground mt-1">
-            ({getQuestionTypeLabel(question.type)})
-          </span>
-        </h3>
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 sm:gap-3 mb-3 sm:mb-4">
+        <div className="flex justify-between items-start gap-2 sm:gap-3">
+          <h3 className="text-base sm:text-lg font-semibold text-primary flex-1 min-w-0">
+            <span className="block sm:hidden">Q{index + 1}</span>
+            <span className="hidden sm:block">Question {index + 1}</span>
+            <span className="block text-xs sm:text-sm font-normal text-muted-foreground mt-1">
+              ({getQuestionTypeLabel(question.type)})
+            </span>
+          </h3>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => removeQuestion(index)}
+            className="h-8 w-8 sm:h-10 sm:w-10 flex-shrink-0 sm:hidden touch-target"
+          >
+            <Trash className="h-3 w-3 sm:h-4 sm:w-4" />
+          </Button>
+        </div>
         <Button
           variant="ghost"
           size="icon"
           onClick={() => removeQuestion(index)}
-          className="h-8 w-8 sm:h-10 sm:w-10 flex-shrink-0"
+          className="hidden sm:flex h-8 w-8 sm:h-10 sm:w-10 flex-shrink-0 touch-target self-start"
         >
           <Trash className="h-3 w-3 sm:h-4 sm:w-4" />
         </Button>
@@ -166,25 +176,27 @@ export function QuestionCard({
             { question.type === 'multiple-choice' ? (
               <div className="space-y-2 mt-2">
                 {question.options.map((option, optionIndex) => (
-                  <div key={option.id} className="flex items-center gap-2 p-2 sm:p-3 rounded-lg has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-primary/50 touch-manipulation">
-                    <Checkbox
-                      id={`correct-answer-${index}-${optionIndex}`}
-                      checked={question.correctAnswer.includes(option.id)}
-                      onCheckedChange={() => handleCorrectAnswerChange(option.id)}
-                      className="flex-shrink-0 h-5 w-5 sm:h-6 sm:w-6"
-                    />
-                    <Input
-                      value={option.text}
-                      onChange={(e) => handleOptionChange(optionIndex, e)}
-                      placeholder={`Option ${optionIndex + 1}`}
-                      className="text-sm sm:text-base flex-1 min-w-0 touch-target"
-                    />
+                  <div key={option.id} className="flex flex-col sm:flex-row gap-2 sm:gap-3 p-2 sm:p-3 rounded-lg has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-primary/50 touch-manipulation">
+                    <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+                      <Checkbox
+                        id={`correct-answer-${index}-${optionIndex}`}
+                        checked={question.correctAnswer.includes(option.id)}
+                        onCheckedChange={() => handleCorrectAnswerChange(option.id)}
+                        className="flex-shrink-0 h-5 w-5 sm:h-6 sm:w-6"
+                      />
+                      <Input
+                        value={option.text}
+                        onChange={(e) => handleOptionChange(optionIndex, e)}
+                        placeholder={`Option ${optionIndex + 1}`}
+                        className="text-sm sm:text-base flex-1 min-w-0 touch-target"
+                      />
+                    </div>
                     <Button
                       variant="ghost"
                       size="icon"
                       onClick={() => removeOption(optionIndex)}
                       disabled={question.options.length <= 2}
-                      className="h-8 w-8 sm:h-10 sm:w-10 flex-shrink-0 touch-target"
+                      className="h-8 w-8 sm:h-10 sm:w-10 flex-shrink-0 touch-target self-center sm:self-start"
                     >
                       <Trash className="h-3 w-3 sm:h-4 sm:w-4" />
                     </Button>
@@ -202,9 +214,9 @@ export function QuestionCard({
                 onValueChange={handleCorrectAnswerChange}
               >
                 {question.options.map((option) => (
-                  <div key={option.id} className="flex items-center space-x-2 p-2 sm:p-3 rounded-lg has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-primary/50 touch-manipulation">
-                    <RadioGroupItem value={option.id} id={`${question.id}-${option.id}`} className="h-5 w-5 sm:h-6 sm:w-6" />
-                    <Label htmlFor={`${question.id}-${option.id}`} className="text-sm sm:text-base cursor-pointer flex-1 touch-target">{option.text}</Label>
+                  <div key={option.id} className="flex items-start gap-2 sm:gap-3 p-2 sm:p-3 rounded-lg has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-primary/50 touch-manipulation">
+                    <RadioGroupItem value={option.id} id={`${question.id}-${option.id}`} className="flex-shrink-0 mt-0.5 h-5 w-5 sm:h-6 sm:w-6" />
+                    <Label htmlFor={`${question.id}-${option.id}`} className="text-sm sm:text-base cursor-pointer flex-1 min-w-0 leading-relaxed touch-target">{option.text}</Label>
                   </div>
                 ))}
               </RadioGroup>
@@ -213,29 +225,32 @@ export function QuestionCard({
         )}
 
         { (question.type === "short-answer" || question.type === "fill-in-the-blank") &&
-          <div>
-            <Label>Correct Answer</Label>
-            <Input
-              value={question.correctAnswer[0] || ''}
-              onChange={(e) => handleCorrectAnswerChange(e.target.value)}
-              placeholder="Enter the correct answer"
-              className="mt-1 touch-target"
-            />
-             <p className="text-xs text-muted-foreground mt-1">
-              For short answer, this is an exact match. Case-insensitive.
-            </p>
-          </div>
+        <div className="space-y-2">
+          <Label htmlFor={`correct-answer-${index}`} className="text-sm font-medium">Correct Answer</Label>
+          <Input
+            id={`correct-answer-${index}`}
+            value={question.correctAnswer[0] || ''}
+            onChange={(e) => handleCorrectAnswerChange(e.target.value)}
+            placeholder="Enter the correct answer"
+            className="w-full touch-target"
+          />
+           <p className="text-xs text-muted-foreground leading-relaxed">
+            For short answer, this is an exact match. Case-insensitive.
+          </p>
+        </div>
         }
 
-        <div>
-          <Label htmlFor={`question-points-${index}`}>Points</Label>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+          <Label htmlFor={`question-points-${index}`} className="text-sm font-medium sm:min-w-fit">Points</Label>
           <Input
             id={`question-points-${index}`}
             name="points"
             type="number"
+            min="0"
+            max="100"
             value={question.points}
             onChange={handleQuestionChange}
-            className="w-24 touch-target"
+            className="w-full sm:w-24 touch-target"
           />
         </div>
       </div>

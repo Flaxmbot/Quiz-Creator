@@ -255,12 +255,12 @@ export function StudentDashboard({ className }: StudentDashboardProps) {
             )}
           </Card>
         ) : (
-          <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
             {filteredQuizzes.map((quiz) => (
-              <Card key={quiz.id} className="futuristic-card hover:neon-glow transition-all duration-300">
-                <CardHeader className="pb-3">
+              <Card key={quiz.id} className="futuristic-card hover:neon-glow transition-all duration-300 min-h-[280px] sm:min-h-[320px]">
+                <CardHeader className="pb-4">
                   <div className="flex items-start justify-between gap-2">
-                    <CardTitle className="text-sm sm:text-base font-semibold">
+                    <CardTitle className="text-base sm:text-lg font-semibold">
                       {quiz.title}
                     </CardTitle>
                     {hasUserTakenQuiz(quiz.id) && (

@@ -59,8 +59,8 @@ export function Header() {
             {!loading && (
               <>
                 {user ? (
-                  <div className="flex items-center gap-1 sm:gap-4">
-                    <Button asChild variant="outline" size="sm" className="hidden sm:inline-flex touch-target">
+                  <div className="flex items-center gap-2 sm:gap-4">
+                    <Button asChild variant="outline" size="sm" className="hidden sm:inline-flex touch-target min-h-[44px]">
                       <Link href="/dashboard">Dashboard</Link>
                     </Button>
                     

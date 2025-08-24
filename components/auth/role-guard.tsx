@@ -77,6 +77,41 @@ export function RoleGuard({
 
   // Show access denied if user role is not allowed
   if (!userProfile || !allowedRoles.includes(userProfile.role)) {
+    const isStudentTryingTeacherAction = userProfile?.role === 'student' && allowedRoles.includes('teacher');
+    const isTeacherTryingStudentAction = userProfile?.role === 'teacher' && allowedRoles.includes('student');
+    
+    let specificMessage = fallbackMessage;
+    let actionButton = (
+      <Button asChild className="w-full touch-target">
+        <Link href="/dashboard">
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back to Dashboard
+        </Link>
+      </Button>
+    );
+
+    if (isStudentTryingTeacherAction) {
+      specificMessage = "This feature is only available to teachers. As a student, you can take quizzes and view your results from the dashboard.";
+      actionButton = (
+        <Button asChild className="w-full touch-target">
+          <Link href="/dashboard">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Browse Available Quizzes
+          </Link>
+        </Button>
+      );
+    } else if (isTeacherTryingStudentAction) {
+      specificMessage = "This feature is designed for students. As a teacher, you can create and manage quizzes from your dashboard.";
+      actionButton = (
+        <Button asChild className="w-full touch-target">
+          <Link href="/dashboard">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Manage Your Quizzes
+          </Link>
+        </Button>
+      );
+    }
+
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <Card className="futuristic-card p-8 sm:p-12 text-center max-w-md mx-auto">
@@ -85,21 +120,21 @@ export function RoleGuard({
               <AlertTriangle className="w-16 h-16 sm:w-20 sm:h-20 mx-auto text-yellow-400" />
               <div className="absolute inset-0 rounded-full bg-yellow-400/20 blur-xl -z-10"></div>
             </div>
-            <div className="space-y-2">
-              <h2 className="text-xl sm:text-2xl font-bold">Access Denied</h2>
-              <p className="text-sm sm:text-base text-muted-foreground">
-                {fallbackMessage}
+            <div className="space-y-3">
+              <h2 className="text-xl sm:text-2xl font-bold">Access Restricted</h2>
+              <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">
+                {specificMessage}
               </p>
-              <p className="text-xs text-muted-foreground mt-2">
-                Your current role: <span className="font-semibold">{userProfile?.role || 'Unknown'}</span>
-              </p>
+              <div className="bg-muted/50 rounded-lg p-3 mt-4">
+                <p className="text-xs text-muted-foreground">
+                  Your current role: <span className="font-semibold text-primary">{userProfile?.role || 'Unknown'}</span>
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Required role(s): <span className="font-semibold text-primary">{allowedRoles.join(', ')}</span>
+                </p>
+              </div>
             </div>
-            <Button asChild className="w-full touch-target">
-              <Link href="/dashboard">
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back to Dashboard
-              </Link>
-            </Button>
+            {actionButton}
           </CardContent>
         </Card>
       </div>

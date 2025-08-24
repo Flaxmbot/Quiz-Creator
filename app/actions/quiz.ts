@@ -2,7 +2,7 @@
 
 import { enhanceQuizQuestion } from '@/ai/flows/enhance-quiz-question';
 import { generateQuiz, type GenerateQuizInput } from '@/ai/flows/generate-quiz';
-import { saveQuiz, updateQuiz } from '@/lib/firestore';
+import { saveQuiz, updateQuiz, getUserProfile } from '@/lib/firestore';
 import type { Quiz } from '@/lib/types';
 import { handleGenericError } from '@/lib/error-handling';
 
@@ -11,6 +11,17 @@ export async function createQuizAction(quizData: Omit<Quiz, "id" | "authorId" | 
     if (!userId) {
       return { success: false, error: 'User must be logged in to create a quiz.' };
     }
+    
+    // Check if user has teacher role
+    const userProfile = await getUserProfile(userId);
+    if (!userProfile) {
+      return { success: false, error: 'User profile not found. Please refresh the page and try again.' };
+    }
+    
+    if (userProfile.role !== 'teacher') {
+      return { success: false, error: 'Only teachers can create quizzes. Students can take quizzes from the dashboard.' };
+    }
+    
     if (!quizData.title) {
       return { success: false, error: 'Quiz title cannot be empty.' };
     }
@@ -33,6 +44,16 @@ export async function updateQuizAction(quizId: string, quizData: Partial<Omit<Qu
     }
     if (!quizId) {
       return { success: false, error: 'Quiz ID is missing.' };
+    }
+
+    // Check if user has teacher role
+    const userProfile = await getUserProfile(userId);
+    if (!userProfile) {
+      return { success: false, error: 'User profile not found. Please refresh the page and try again.' };
+    }
+    
+    if (userProfile.role !== 'teacher') {
+      return { success: false, error: 'Only teachers can update quizzes.' };
     }
 
     await updateQuiz(quizId, quizData, userId);

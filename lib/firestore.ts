@@ -1,4 +1,4 @@
-import { db } from "@/lib/firebase";
+import { db, auth } from "@/lib/firebase";
 import {
   collection,
   addDoc,
@@ -8,7 +8,7 @@ import {
   updateDoc,
   setDoc,
   deleteDoc,
-  serverTimestamp,
+  serverTimestamp, // Use client-side timestamp
   query,
   where,
   orderBy,
@@ -67,60 +67,52 @@ export async function saveQuiz(
   quizData: Omit<Quiz, "id" | "authorId" | "createdAt">,
   userId: string
 ): Promise<string> {
-  if (!userId) {
-    throw new Error("User ID is required to save a quiz");
-  }
-
+  console.log('🔍 [saveQuiz] Starting save operation');
+  console.log('📊 [saveQuiz] User ID:', userId);
+  console.log('📊 [saveQuiz] Database project:', db.app.options.projectId);
+  console.log('📊 [saveQuiz] Database app name:', db.app.name);
+  
+  // Check authentication state from Firebase Auth
+  const currentUser = auth.currentUser;
+  console.log('👤 [saveQuiz] Current user from auth:', currentUser ? {
+    uid: currentUser.uid,
+    email: currentUser.email,
+    emailVerified: currentUser.emailVerified
+  } : 'No current user');
+  
   try {
-    console.log("[saveQuiz] Starting save operation for user:", userId);
-    console.log("[saveQuiz] Quiz data:", {
-      title: quizData.title,
-      description: quizData.description?.substring(0, 50) + "...",
-      questionsCount: quizData.questions?.length || 0
-    });
-
     const quizDataToSave = {
       ...quizData,
       authorId: userId,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
       isPublished: false,
-      isPublic: false, // Ensure isPublic is set
+      isPublic: false,
       submissionCount: 0,
     };
-
-    console.log("[saveQuiz] Data to be saved:", {
-      ...quizDataToSave,
-      questions: `[${quizDataToSave.questions?.length || 0} questions]`
-    });
-
-    const docRef = await addDoc(collection(db, "quizzes"), quizDataToSave);
     
-    console.log("[saveQuiz] Quiz saved successfully with ID:", docRef.id);
-    return docRef.id;
-
-  } catch (error) {
-    console.error("[saveQuiz] Detailed error:", {
-      error,
-      errorMessage: error instanceof Error ? error.message : String(error),
-      errorStack: error instanceof Error ? error.stack : undefined,
-      errorCode: (error as any)?.code,
-      errorName: (error as any)?.name,
-      userId,
-      quizTitle: quizData.title
+    console.log('📝 [saveQuiz] Quiz data to save:', {
+      title: quizDataToSave.title,
+      authorId: quizDataToSave.authorId,
+      questionsCount: quizDataToSave.questions?.length || 0
     });
 
-    // Provide more specific error messages
-    if ((error as any)?.code === 'permission-denied') {
-      throw new Error("You don't have permission to create quizzes. Please make sure you're logged in and try again.");
-    } else if ((error as any)?.code === 'unauthenticated') {
-      throw new Error("You must be signed in to create a quiz. Please log in and try again.");
-    } else if ((error as any)?.code === 'invalid-argument') {
-      throw new Error("Invalid quiz data provided. Please check your quiz details and try again.");
-    }
-
-    // Re-throw with the original error message if it's something else
-    throw error;
+    const quizzesCollection = collection(db, "quizzes");
+    console.log('🗂️ [saveQuiz] Collection reference created');
+    
+    console.log('💾 [saveQuiz] Attempting to add document...');
+    const docRef = await addDoc(quizzesCollection, quizDataToSave);
+    
+    console.log('✅ [saveQuiz] Document added successfully with ID:', docRef.id);
+    return docRef.id;
+    
+  } catch (error) {
+    console.error('❌ [saveQuiz] Detailed error information:');
+    console.error('Error object:', error);
+    console.error('Error code:', (error as any)?.code);
+    console.error('Error message:', (error as any)?.message);
+    console.error('Error stack:', (error as any)?.stack);
+    throw new Error(`Failed to save quiz: ${(error as any)?.message || error}`);
   }
 }
 
@@ -249,7 +241,8 @@ export async function submitQuiz(submission: Omit<QuizSubmission, "id" | "submit
   }
 
   const { data, error } = await safeAsync(async () => {
-    const docRef = await addDoc(collection(db, "submissions"), {
+    const submissionsCollection = collection(db, "submissions");
+    const docRef = await addDoc(submissionsCollection, {
       ...submission,
       submittedAt: serverTimestamp(),
     });
@@ -392,7 +385,8 @@ export async function toggleQuizPublic(
  */
 export async function saveSubmission(submissionData: { quizId: string; answers: Record<string, string[]>; studentId?: string }) {
     try {
-        const docRef = await addDoc(collection(db, "submissions"), {
+        const submissionsCollection = collection(db, "submissions");
+        const docRef = await addDoc(submissionsCollection, {
             ...submissionData,
             submittedAt: serverTimestamp(),
         });
