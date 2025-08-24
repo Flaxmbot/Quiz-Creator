@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { useAuthState } from "react-firebase-hooks/auth";
 import { auth } from "@/lib/firebase";
-import { getAllTeacherQuizzes, getFeaturedQuizzes, getUserSubmissions } from "@/lib/firestore";
+import { getAllTeacherQuizzes, getUserSubmissions } from "@/lib/firestore";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { handleGenericError } from "@/lib/error-handling";
@@ -32,29 +32,51 @@ export function StudentDashboard({ className }: StudentDashboardProps) {
 
   const fetchData = async () => {
     if (user) {
+      setIsDataLoading(true);
+      console.log("StudentDashboard: Fetching data for user:", user.uid);
+      
+      // Fetch each data source independently to handle partial failures
+      const promises = [
+        getAllTeacherQuizzes().catch(error => {
+          console.error("StudentDashboard: Error fetching teacher quizzes:", error);
+          return []; // Return empty array on error
+        }),
+        getUserSubmissions(user.uid).catch(error => {
+          console.error("StudentDashboard: Error fetching user submissions:", error);
+          return []; // Return empty array on error
+        })
+      ];
+
       try {
-        setIsDataLoading(true);
-        console.log("Fetching data for user:", user.uid);
+        const results = await Promise.allSettled(promises);
         
-        const [teacherQuizzes, featured, submissions] = await Promise.all([
-          getAllTeacherQuizzes(),
-          getFeaturedQuizzes(6),
-          getUserSubmissions(user.uid),
-        ]);
+        // Extract results with proper typing, defaulting to empty arrays for failed promises
+        const teacherQuizzesResult = results[0].status === 'fulfilled' ? results[0].value as Quiz[] : [];
+        const submissionsResult = results[1].status === 'fulfilled' ? results[1].value as QuizSubmission[] : [];
         
         // Debug logging
-        console.log("Teacher quizzes fetched:", teacherQuizzes.length);
-        console.log("Teacher quizzes data:", teacherQuizzes);
-        console.log("Featured quizzes fetched:", featured.length);
-        console.log("Featured quizzes data:", featured);
-        console.log("User submissions fetched:", submissions.length);
-        console.log("User submissions data:", submissions);
+        console.log("StudentDashboard: Teacher quizzes fetched:", teacherQuizzesResult.length);
+        console.log("StudentDashboard: Teacher quizzes data:", teacherQuizzesResult);
+        console.log("StudentDashboard: User submissions fetched:", submissionsResult.length);
+        console.log("StudentDashboard: User submissions data:", submissionsResult);
         
-        setAvailableQuizzes(teacherQuizzes);
-        setFeaturedQuizzes(featured);
-        setUserSubmissions(submissions);
+        setAvailableQuizzes(teacherQuizzesResult);
+        setFeaturedQuizzes([]); // No longer fetching featured quizzes
+        setUserSubmissions(submissionsResult);
+
+        // Show a warning if some data failed to load
+        const failedPromises = results.filter(p => p.status === 'rejected');
+        if (failedPromises.length > 0) {
+          console.warn(`StudentDashboard: ${failedPromises.length} data sources failed to load`);
+          toast({
+            variant: 'default',
+            title: 'Partial data loading',
+            description: 'Some quiz data may not be available at the moment.',
+          });
+        }
+        
       } catch (error) {
-        console.error("Error fetching data:", error);
+        console.error("StudentDashboard: Unexpected error in fetchData:", error);
         const appError = handleGenericError(error);
         toast({
           variant: 'destructive',
@@ -173,68 +195,7 @@ export function StudentDashboard({ className }: StudentDashboardProps) {
         </Card>
       </div>
 
-      {/* Featured Quizzes */}
-      {featuredQuizzes.length > 0 && (
-        <div className="space-y-3 sm:space-y-4">
-          <h2 className="text-lg sm:text-xl font-semibold text-foreground flex items-center gap-2">
-            <Star className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-400" />
-            Featured Quizzes
-          </h2>
-          <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-            {featuredQuizzes.map((quiz) => (
-              <Card key={quiz.id} className="futuristic-card hover:neon-glow transition-all duration-300">
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <CardTitle className="text-sm sm:text-base font-semibold">
-                      {quiz.title}
-                    </CardTitle>
-                    {hasUserTakenQuiz(quiz.id) && (
-                      <Badge variant="secondary" className="text-xs">
-                        Completed
-                      </Badge>
-                    )}
-                  </div>
-                  <CardDescription className="text-xs sm:text-sm">
-                    {quiz.description}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <div className="flex items-center text-xs sm:text-sm text-muted-foreground gap-3">
-                    <span className="flex items-center gap-1">
-                      <BookOpen className="h-3 w-3" />
-                      {quiz.questions?.length || 0} questions
-                    </span>
-                    {quiz.timeLimit && (
-                      <span className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        {quiz.timeLimit} min
-                      </span>
-                    )}
-                  </div>
-                  {quiz.category && (
-                    <Badge variant="outline" className="text-xs">
-                      {quiz.category}
-                    </Badge>
-                  )}
-                  {hasUserTakenQuiz(quiz.id) && (
-                    <div className="text-xs text-green-400 font-medium">
-                      Your Score: {getUserQuizScore(quiz.id)}%
-                    </div>
-                  )}
-                </CardContent>
-                <CardFooter className="pt-0">
-                  <Link href={`/quiz/${quiz.id}`} className="w-full">
-                    <Button className="w-full text-xs sm:text-sm touch-manipulation touch-target">
-                      <PlayCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
-                      {hasUserTakenQuiz(quiz.id) ? "Retake Quiz" : "Start Quiz"}
-                    </Button>
-                  </Link>
-                </CardFooter>
-              </Card>
-            ))}
-          </div>
-        </div>
-      )}
+      {/* Featured Quizzes section removed */}
 
       {/* Search and Filter */}
       <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
@@ -278,7 +239,7 @@ export function StudentDashboard({ className }: StudentDashboardProps) {
                 : "No published quizzes from teachers are available at the moment. Check back later!"}
             </p>
             <p className="text-xs text-muted-foreground mb-4">
-              Debug info: Available quizzes: {availableQuizzes.length}, Featured quizzes: {featuredQuizzes.length}
+              Debug info: Available quizzes: {availableQuizzes.length}
             </p>
             {(searchTerm || filterCategory !== "all") && (
               <Button

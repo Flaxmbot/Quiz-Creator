@@ -19,6 +19,46 @@ import type { Quiz, QuizSubmission, User } from "@/lib/types";
 import { handleGenericError, logError, safeAsync } from "@/lib/error-handling";
 
 /**
+ * Helper function to convert Firestore Timestamp to Date
+ * Handles both Firestore Timestamp objects and JavaScript Date objects
+ * @param timestamp - The timestamp to convert
+ * @returns Date object or null if timestamp is null/undefined
+ */
+function convertTimestampToDate(timestamp: any): Date | null {
+  if (!timestamp) return null;
+  
+  // If it's already a Date object, return it
+  if (timestamp instanceof Date) {
+    return timestamp;
+  }
+  
+  // If it's a Firestore Timestamp, convert it to Date
+  if (timestamp instanceof Timestamp) {
+    return timestamp.toDate();
+  }
+  
+  // If it's a timestamp object with toDate method (like Firestore Timestamp)
+  if (typeof timestamp.toDate === 'function') {
+    return timestamp.toDate();
+  }
+  
+  // If it's a string, try to parse it as a date
+  if (typeof timestamp === 'string') {
+    const date = new Date(timestamp);
+    return isNaN(date.getTime()) ? null : date;
+  }
+  
+  // If it's a number (milliseconds since epoch), convert to Date
+  if (typeof timestamp === 'number') {
+    return new Date(timestamp);
+  }
+  
+  // For any other case, try to convert to Date
+  const date = new Date(timestamp);
+  return isNaN(date.getTime()) ? null : date;
+}
+
+/**
  * Saves a quiz to Firestore.
  * @param quizData - The quiz data to save.
  * @param userId - The ID of the user creating the quiz.
@@ -31,23 +71,57 @@ export async function saveQuiz(
     throw new Error("User ID is required to save a quiz");
   }
 
-  const { data, error } = await safeAsync(async () => {
-    const docRef = await addDoc(collection(db, "quizzes"), {
+  try {
+    console.log("[saveQuiz] Starting save operation for user:", userId);
+    console.log("[saveQuiz] Quiz data:", {
+      title: quizData.title,
+      description: quizData.description?.substring(0, 50) + "...",
+      questionsCount: quizData.questions?.length || 0
+    });
+
+    const quizDataToSave = {
       ...quizData,
       authorId: userId,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
       isPublished: false,
+      isPublic: false, // Ensure isPublic is set
       submissionCount: 0,
+    };
+
+    console.log("[saveQuiz] Data to be saved:", {
+      ...quizDataToSave,
+      questions: `[${quizDataToSave.questions?.length || 0} questions]`
     });
+
+    const docRef = await addDoc(collection(db, "quizzes"), quizDataToSave);
+    
+    console.log("[saveQuiz] Quiz saved successfully with ID:", docRef.id);
     return docRef.id;
-  }, "saveQuiz");
 
-  if (error) {
-    throw new Error(error.message);
+  } catch (error) {
+    console.error("[saveQuiz] Detailed error:", {
+      error,
+      errorMessage: error instanceof Error ? error.message : String(error),
+      errorStack: error instanceof Error ? error.stack : undefined,
+      errorCode: (error as any)?.code,
+      errorName: (error as any)?.name,
+      userId,
+      quizTitle: quizData.title
+    });
+
+    // Provide more specific error messages
+    if ((error as any)?.code === 'permission-denied') {
+      throw new Error("You don't have permission to create quizzes. Please make sure you're logged in and try again.");
+    } else if ((error as any)?.code === 'unauthenticated') {
+      throw new Error("You must be signed in to create a quiz. Please log in and try again.");
+    } else if ((error as any)?.code === 'invalid-argument') {
+      throw new Error("Invalid quiz data provided. Please check your quiz details and try again.");
+    }
+
+    // Re-throw with the original error message if it's something else
+    throw error;
   }
-
-  return data!;
 }
 
 /**
@@ -114,12 +188,15 @@ export async function getUserQuizzes(userId: string): Promise<Quiz[]> {
       orderBy("createdAt", "desc")
     );
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-      createdAt: doc.data().createdAt?.toDate?.() || new Date(),
-      updatedAt: doc.data().updatedAt?.toDate?.() || new Date(),
-    })) as Quiz[];
+    return querySnapshot.docs.map((doc) => {
+      const quizData = doc.data();
+      return {
+        id: doc.id,
+        ...quizData,
+        createdAt: convertTimestampToDate(quizData.createdAt) || new Date(),
+        updatedAt: convertTimestampToDate(quizData.updatedAt) || new Date(),
+      };
+    }) as Quiz[];
   }, "getUserQuizzes");
 
   if (error) {
@@ -146,11 +223,12 @@ export async function getQuiz(quizId: string): Promise<Quiz | null> {
       return null;
     }
 
+    const quizData = quizSnap.data();
     return {
       id: quizSnap.id,
-      ...quizSnap.data(),
-      createdAt: quizSnap.data().createdAt?.toDate?.() || new Date(),
-      updatedAt: quizSnap.data().updatedAt?.toDate?.() || new Date(),
+      ...quizData,
+      createdAt: convertTimestampToDate(quizData.createdAt) || new Date(),
+      updatedAt: convertTimestampToDate(quizData.updatedAt) || new Date(),
     } as Quiz;
   }, "getQuiz");
 
@@ -202,11 +280,14 @@ export async function getQuizSubmissions(quizId: string, userId: string): Promis
       orderBy("submittedAt", "desc")
     );
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-      submittedAt: doc.data().submittedAt?.toDate?.() || new Date(),
-    })) as QuizSubmission[];
+    return querySnapshot.docs.map((doc) => {
+      const submissionData = doc.data();
+      return {
+        id: doc.id,
+        ...submissionData,
+        submittedAt: convertTimestampToDate(submissionData.submittedAt) || new Date(),
+      };
+    }) as QuizSubmission[];
   }, "getQuizSubmissions");
 
   if (error) {
@@ -232,11 +313,14 @@ export async function getUserSubmissions(userId: string): Promise<QuizSubmission
       orderBy("submittedAt", "desc")
     );
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-      submittedAt: doc.data().submittedAt?.toDate?.() || new Date(),
-    })) as QuizSubmission[];
+    return querySnapshot.docs.map((doc) => {
+      const submissionData = doc.data();
+      return {
+        id: doc.id,
+        ...submissionData,
+        submittedAt: convertTimestampToDate(submissionData.submittedAt) || new Date(),
+      };
+    }) as QuizSubmission[];
   }, "getUserSubmissions");
 
   if (error) {
@@ -335,11 +419,14 @@ export async function getQuizResults(quizId: string): Promise<QuizSubmission[]> 
       orderBy("submittedAt", "desc")
     );
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-      submittedAt: doc.data().submittedAt?.toDate?.() || new Date(),
-    })) as QuizSubmission[];
+    return querySnapshot.docs.map((doc) => {
+      const submissionData = doc.data();
+      return {
+        id: doc.id,
+        ...submissionData,
+        submittedAt: convertTimestampToDate(submissionData.submittedAt) || new Date(),
+      };
+    }) as QuizSubmission[];
   }, "getQuizResults");
 
   if (error) {
@@ -362,22 +449,46 @@ export async function createUserProfile(
     throw new Error("User ID is required to create a profile");
   }
 
-  const { error } = await safeAsync(async () => {
+  try {
+    console.log("[createUserProfile] Creating/updating profile for user:", userId);
+    console.log("[createUserProfile] User data:", userData);
+
     const userRef = doc(db, "users", userId);
     const userDoc = await getDoc(userRef);
 
     if (!userDoc.exists()) {
+      console.log("[createUserProfile] User profile doesn't exist, creating new one");
       await setDoc(userRef, {
         id: userId,
         ...userData,
         createdAt: serverTimestamp(),
         lastLoginAt: serverTimestamp(),
       });
+      console.log("[createUserProfile] User profile created successfully");
+    } else {
+      console.log("[createUserProfile] User profile already exists, updating lastLoginAt");
+      // Update lastLoginAt for existing users
+      await updateDoc(userRef, {
+        lastLoginAt: serverTimestamp(),
+      });
+      console.log("[createUserProfile] User profile updated successfully");
     }
-  }, "createUserProfile");
+  } catch (error) {
+    console.error("[createUserProfile] Detailed error:", {
+      error,
+      errorMessage: error instanceof Error ? error.message : String(error),
+      errorStack: error instanceof Error ? error.stack : undefined,
+      errorCode: (error as any)?.code,
+      errorName: (error as any)?.name,
+      userId,
+      userData
+    });
 
-  if (error) {
-    throw new Error(error.message);
+    if ((error as any)?.code === 'permission-denied') {
+      throw new Error("You don't have permission to create a user profile. Please make sure you're logged in correctly.");
+    }
+
+    throw error;
   }
 }
 
@@ -398,11 +509,12 @@ export async function getUserProfile(userId: string): Promise<User | null> {
       return null;
     }
 
+    const userData = userSnap.data();
     return {
       id: userSnap.id,
-      ...userSnap.data(),
-      createdAt: userSnap.data().createdAt?.toDate?.() || new Date(),
-      lastLoginAt: userSnap.data().lastLoginAt?.toDate?.() || new Date(),
+      ...userData,
+      createdAt: convertTimestampToDate(userData.createdAt) || new Date(),
+      lastLoginAt: convertTimestampToDate(userData.lastLoginAt) || new Date(),
     } as User;
   }, "getUserProfile");
 
@@ -425,12 +537,15 @@ export async function getPublicQuizzes(): Promise<Quiz[]> {
       orderBy("createdAt", "desc")
     );
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-      createdAt: doc.data().createdAt?.toDate?.() || new Date(),
-      updatedAt: doc.data().updatedAt?.toDate?.() || new Date(),
-    })) as Quiz[];
+    return querySnapshot.docs.map((doc) => {
+      const quizData = doc.data();
+      return {
+        id: doc.id,
+        ...quizData,
+        createdAt: convertTimestampToDate(quizData.createdAt) || new Date(),
+        updatedAt: convertTimestampToDate(quizData.updatedAt) || new Date(),
+      };
+    }) as Quiz[];
   }, "getPublicQuizzes");
 
   if (error) {
@@ -445,28 +560,75 @@ export async function getPublicQuizzes(): Promise<Quiz[]> {
  * @param limit - Number of quizzes to fetch
  */
 export async function getFeaturedQuizzes(quizLimit: number = 10): Promise<Quiz[]> {
-  const { data, error } = await safeAsync(async () => {
-    const q = query(
-      collection(db, "quizzes"),
-      where("isPublic", "==", true),
-      where("isPublished", "==", true),
-      orderBy("createdAt", "desc"),
-      limit(quizLimit)
-    );
-    const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-      createdAt: doc.data().createdAt?.toDate?.() || new Date(),
-      updatedAt: doc.data().updatedAt?.toDate?.() || new Date(),
-    })) as Quiz[];
-  }, "getFeaturedQuizzes");
+  try {
+    console.log(`[getFeaturedQuizzes] Starting query with limit: ${quizLimit}`);
+    
+    // First try the composite query
+    let querySnapshot;
+    try {
+      const q = query(
+        collection(db, "quizzes"),
+        where("isPublic", "==", true),
+        where("isPublished", "==", true),
+        orderBy("createdAt", "desc"),
+        limit(quizLimit)
+      );
+      console.log("[getFeaturedQuizzes] Executing composite query...");
+      querySnapshot = await getDocs(q);
+      console.log(`[getFeaturedQuizzes] Composite query successful, found ${querySnapshot.docs.length} documents`);
+    } catch (compositeError) {
+      console.warn("[getFeaturedQuizzes] Composite query failed, trying fallback:", compositeError);
+      
+      // Fallback: Try without orderBy if composite index doesn't exist
+      const fallbackQuery = query(
+        collection(db, "quizzes"),
+        where("isPublic", "==", true),
+        where("isPublished", "==", true),
+        limit(quizLimit)
+      );
+      console.log("[getFeaturedQuizzes] Executing fallback query without orderBy...");
+      querySnapshot = await getDocs(fallbackQuery);
+      console.log(`[getFeaturedQuizzes] Fallback query successful, found ${querySnapshot.docs.length} documents`);
+    }
 
-  if (error) {
-    throw new Error(error.message);
+    const quizzes = querySnapshot.docs.map((doc) => {
+      try {
+        const quizData = doc.data();
+        console.log(`[getFeaturedQuizzes] Processing document ${doc.id}:`, {
+          title: quizData.title,
+          isPublic: quizData.isPublic,
+          isPublished: quizData.isPublished,
+          createdAt: quizData.createdAt
+        });
+        
+        return {
+          id: doc.id,
+          ...quizData,
+          createdAt: convertTimestampToDate(quizData.createdAt) || new Date(),
+          updatedAt: convertTimestampToDate(quizData.updatedAt) || new Date(),
+        };
+      } catch (docError) {
+        console.error(`[getFeaturedQuizzes] Error processing document ${doc.id}:`, docError);
+        throw docError;
+      }
+    }) as Quiz[];
+
+    console.log(`[getFeaturedQuizzes] Successfully processed ${quizzes.length} quizzes`);
+    return quizzes;
+
+  } catch (error) {
+    console.error("[getFeaturedQuizzes] Detailed error:", {
+      error,
+      errorMessage: error instanceof Error ? error.message : String(error),
+      errorStack: error instanceof Error ? error.stack : undefined,
+      errorCode: (error as any)?.code,
+      errorName: (error as any)?.name
+    });
+    
+    // Return empty array instead of throwing to prevent breaking the student dashboard
+    console.log("[getFeaturedQuizzes] Returning empty array due to error");
+    return [];
   }
-
-  return data || [];
 }
 
 /**
@@ -474,24 +636,69 @@ export async function getFeaturedQuizzes(quizLimit: number = 10): Promise<Quiz[]
  * This allows students to access quizzes from all teachers, not just public ones.
  */
 export async function getAllTeacherQuizzes(): Promise<Quiz[]> {
-  const { data, error } = await safeAsync(async () => {
-    const q = query(
-      collection(db, "quizzes"),
-      where("isPublished", "==", true),
-      orderBy("createdAt", "desc")
-    );
-    const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-      createdAt: doc.data().createdAt?.toDate?.() || new Date(),
-      updatedAt: doc.data().updatedAt?.toDate?.() || new Date(),
-    })) as Quiz[];
-  }, "getAllTeacherQuizzes");
+  try {
+    console.log("[getAllTeacherQuizzes] Starting query for all published quizzes");
+    
+    // First try the query with orderBy
+    let querySnapshot;
+    try {
+      const q = query(
+        collection(db, "quizzes"),
+        where("isPublished", "==", true),
+        orderBy("createdAt", "desc")
+      );
+      console.log("[getAllTeacherQuizzes] Executing query with orderBy...");
+      querySnapshot = await getDocs(q);
+      console.log(`[getAllTeacherQuizzes] Query with orderBy successful, found ${querySnapshot.docs.length} documents`);
+    } catch (orderByError) {
+      console.warn("[getAllTeacherQuizzes] Query with orderBy failed, trying fallback:", orderByError);
+      
+      // Fallback: Try without orderBy if index doesn't exist
+      const fallbackQuery = query(
+        collection(db, "quizzes"),
+        where("isPublished", "==", true)
+      );
+      console.log("[getAllTeacherQuizzes] Executing fallback query without orderBy...");
+      querySnapshot = await getDocs(fallbackQuery);
+      console.log(`[getAllTeacherQuizzes] Fallback query successful, found ${querySnapshot.docs.length} documents`);
+    }
 
-  if (error) {
-    throw new Error(error.message);
+    const quizzes = querySnapshot.docs.map((doc) => {
+      try {
+        const quizData = doc.data();
+        console.log(`[getAllTeacherQuizzes] Processing document ${doc.id}:`, {
+          title: quizData.title,
+          isPublished: quizData.isPublished,
+          isPublic: quizData.isPublic,
+          createdAt: quizData.createdAt
+        });
+        
+        return {
+          id: doc.id,
+          ...quizData,
+          createdAt: convertTimestampToDate(quizData.createdAt) || new Date(),
+          updatedAt: convertTimestampToDate(quizData.updatedAt) || new Date(),
+        };
+      } catch (docError) {
+        console.error(`[getAllTeacherQuizzes] Error processing document ${doc.id}:`, docError);
+        throw docError;
+      }
+    }) as Quiz[];
+
+    console.log(`[getAllTeacherQuizzes] Successfully processed ${quizzes.length} quizzes`);
+    return quizzes;
+
+  } catch (error) {
+    console.error("[getAllTeacherQuizzes] Detailed error:", {
+      error,
+      errorMessage: error instanceof Error ? error.message : String(error),
+      errorStack: error instanceof Error ? error.stack : undefined,
+      errorCode: (error as any)?.code,
+      errorName: (error as any)?.name
+    });
+    
+    // Return empty array instead of throwing to prevent breaking the student dashboard
+    console.log("[getAllTeacherQuizzes] Returning empty array due to error");
+    return [];
   }
-
-  return data || [];
 }
