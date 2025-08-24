@@ -18,11 +18,12 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useAuthState } from "react-firebase-hooks/auth";
 import { auth } from "@/lib/firebase";
-import { saveQuiz, getQuiz, updateQuiz } from "@/lib/firestore";
+import { getQuiz } from "@/lib/firestore";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { GenerateQuizOutput } from "@/ai/flows/generate-quiz";
 import { QuizSettings } from "./quiz-settings";
 import { handleGenericError } from "@/lib/error-handling";
+import { createQuizAction, updateQuizAction } from "@/app/actions/quiz";
 
 const initialQuestionState: Question = {
   id: "",
@@ -175,6 +176,7 @@ export function QuizForm() {
         toast({ variant: "destructive", title: "Authentication Error", description: "You must be logged in to save a quiz." });
         return;
     }
+    // Client-side validation for immediate feedback
     if (!quiz.title) {
         toast({ variant: "destructive", title: "Validation Error", description: "Quiz title cannot be empty." });
         return;
@@ -185,29 +187,31 @@ export function QuizForm() {
     }
 
     setIsSaving(true);
+
     try {
-      if (editQuizId) {
-        // Update existing quiz
-        await updateQuiz(editQuizId, quiz, user.uid);
+      const result = editQuizId
+        ? await updateQuizAction(editQuizId, quiz, user.uid)
+        : await createQuizAction(quiz, user.uid);
+
+      if (result.success) {
         toast({
-          title: "Quiz Updated!",
-          description: "Your quiz has been successfully updated.",
+          title: editQuizId ? "Quiz Updated!" : "Quiz Saved!",
+          description: `Your quiz has been successfully ${editQuizId ? 'updated' : 'saved'}.`,
         });
+        router.push("/dashboard");
       } else {
-        // Create new quiz
-        await saveQuiz(quiz, user.uid);
         toast({
-          title: "Quiz Saved!",
-          description: "Your new quiz has been successfully saved.",
+          variant: "destructive",
+          title: editQuizId ? "Update Error" : "Save Error",
+          description: result.error,
         });
       }
-      router.push("/dashboard");
-    } catch (error) {
-      const appError = handleGenericError(error);
+    } catch {
+      // This is for network errors or other unexpected issues with the server action call
       toast({
         variant: "destructive",
-        title: editQuizId ? "Update Error" : "Save Error",
-        description: appError.message,
+        title: "An Unexpected Error Occurred",
+        description: "Something went wrong. Please try again later.",
       });
     } finally {
       setIsSaving(false);
