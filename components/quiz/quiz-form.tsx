@@ -131,7 +131,7 @@ export function QuizForm() {
        newQuestion.correctAnswer = [`option-${Date.now()}-1`]; // Default to true
     } else if (type === 'short-answer' || type === 'fill-in-the-blank') {
        newQuestion.options = [];
-       newQuestion.correctAnswer = [''];
+       newQuestion.correctAnswer = [];
     }
 
     setQuiz({ ...quiz, questions: [...quiz.questions, newQuestion] });

@@ -359,23 +359,14 @@ export async function createUserProfile(
   userData: Omit<User, "id" | "createdAt">
 ): Promise<void> {
   if (!userId) {
-    throw new Error("User ID is required to create profile");
+    throw new Error("User ID is required to create a profile");
   }
 
   const { error } = await safeAsync(async () => {
     const userRef = doc(db, "users", userId);
-    
-    // Check if document exists first
     const userDoc = await getDoc(userRef);
-    
-    if (userDoc.exists()) {
-      // Update existing document
-      await updateDoc(userRef, {
-        ...userData,
-        lastLoginAt: serverTimestamp(),
-      });
-    } else {
-      // Create new document with the specific ID
+
+    if (!userDoc.exists()) {
       await setDoc(userRef, {
         id: userId,
         ...userData,

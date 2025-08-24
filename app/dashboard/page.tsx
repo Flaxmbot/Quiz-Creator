@@ -53,14 +53,19 @@ export default function DashboardPage() {
     if (user) {
       setIsDataLoading(true);
       try {
+        console.log("Fetching data for user:", user.uid);
         const [profile, userQuizzes] = await Promise.all([
           getUserProfile(user.uid),
           getUserQuizzes(user.uid)
         ]);
         
+        console.log("User profile fetched:", profile);
+        console.log("User quizzes fetched:", userQuizzes.length);
+        
         setUserProfile(profile);
         setQuizzes(userQuizzes);
       } catch (error) {
+        console.error("Error fetching data:", error);
         const appError = handleGenericError(error);
         toast({
           variant: "destructive",

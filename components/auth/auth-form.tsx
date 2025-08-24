@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -163,15 +162,12 @@ export function AuthForm({ type }: AuthFormProps) {
     try {
       const result = await signInWithPopup(auth, provider);
       
-      // Create user profile if it's a new user
-      if (type === "register") {
-        await createUserProfile(result.user.uid, {
-          email: result.user.email || '',
-          displayName: result.user.displayName || '',
-          photoURL: result.user.photoURL || '',
-          role: userType as 'teacher' | 'student',
-        });
-      }
+      await createUserProfile(result.user.uid, {
+        email: result.user.email || '',
+        displayName: result.user.displayName || '',
+        photoURL: result.user.photoURL || '',
+        role: userType as 'teacher' | 'student',
+      });
 
       toast({
         title: "Authentication Successful",
