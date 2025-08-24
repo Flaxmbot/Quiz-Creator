@@ -37,17 +37,20 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 // Connect to emulators in development
-if (process.env.NODE_ENV === 'development' && typeof window !== 'undefined') {
+if (process.env.NODE_ENV === 'development') {
   try {
-    // Only connect to emulators if not already connected
-    // if (!auth.config.emulator) {
-    //   connectAuthEmulator(auth, 'http://localhost:3000', { disableWarnings: true });
-    // }
-    // Note: Firestore emulator connection would go here if needed
-    // connectFirestoreEmulator(db, 'localhost', 8080);
+    // Check if emulators are already connected to prevent re-initialization
+    // This is a simplified check; more robust checks might be needed in complex scenarios
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if (!(auth as any)._isEmulator) {
+      console.log("Connecting to Firebase emulators...");
+      connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
+      connectFirestoreEmulator(db, '127.0.0.1', 8080);
+      console.log("Successfully connected to Firebase emulators.");
+    }
   } catch (error) {
-    // Emulators might not be running, which is fine for development
-    console.log('Firebase emulators not available, using production services');
+    console.warn("Could not connect to Firebase emulators. Please ensure they are running.");
+    console.error("Emulator connection error:", error);
   }
 }
 
