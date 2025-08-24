@@ -315,7 +315,9 @@ export default function DashboardPage() {
           return b.questions.length - a.questions.length;
         case "created":
         default:
-          return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+          const bCreatedAt = b.createdAt ? (typeof b.createdAt === 'object' && 'toDate' in b.createdAt ? b.createdAt.toDate() : new Date(b.createdAt)) : new Date(0);
+          const aCreatedAt = a.createdAt ? (typeof a.createdAt === 'object' && 'toDate' in a.createdAt ? a.createdAt.toDate() : new Date(a.createdAt)) : new Date(0);
+          return bCreatedAt.getTime() - aCreatedAt.getTime();
       }
     });
 
