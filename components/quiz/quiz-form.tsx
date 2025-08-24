@@ -151,18 +151,40 @@ export function QuizForm() {
   };
   
   const handleAIQuizGenerated = (generatedQuiz: GenerateQuizOutput) => {
-    // Convert AI-generated quiz to our format
-    const convertedQuestions: Question[] = generatedQuiz.questions.map((q, index) => ({
-      id: `question-${Date.now()}-${index}`,
-      text: q.text,
-      type: q.type,
-      options: q.options?.map((opt, optIndex) => ({
-        id: `option-${Date.now()}-${index}-${optIndex}`,
+    const convertedQuestions: Question[] = generatedQuiz.questions.map((q, index) => {
+      const questionId = `question-${Date.now()}-${index}`;
+
+      const newOptions = q.options?.map((opt, optIndex) => ({
+        id: `option-${questionId}-${optIndex}`,
         text: opt.text,
-      })) || [],
-      correctAnswer: q.correctAnswer,
-      points: q.points,
-    }));
+      })) || [];
+
+      let newCorrectAnswer: string[] = [];
+      if (q.type === 'multiple-choice' || q.type === 'true-false') {
+        // The AI returns an array of indices as strings, e.g., ["0", "2"]
+        newCorrectAnswer = q.correctAnswer
+          .map(ans_idx_str => {
+            const ans_idx = parseInt(ans_idx_str, 10);
+            if (!isNaN(ans_idx) && ans_idx >= 0 && ans_idx < newOptions.length) {
+              return newOptions[ans_idx].id;
+            }
+            return null; // Should not happen if AI follows prompt
+          })
+          .filter((id): id is string => id !== null);
+      } else {
+        // For short-answer or fill-in-the-blank, the answer is the text itself
+        newCorrectAnswer = q.correctAnswer;
+      }
+
+      return {
+        id: questionId,
+        text: q.text,
+        type: q.type,
+        options: newOptions,
+        correctAnswer: newCorrectAnswer,
+        points: q.points,
+      };
+    });
 
     setQuiz({
       title: generatedQuiz.title,
