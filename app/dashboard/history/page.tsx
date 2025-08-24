@@ -35,7 +35,7 @@ export default function QuizHistoryPage() {
           userSubmissions.map(async (submission) => {
             try {
               const quiz = await getQuiz(submission.quizId);
-              return { ...submission, quiz };
+              return { ...submission, quiz: quiz || undefined };
             } catch (error) {
               return submission; // Return submission without quiz if fetch fails
             }
@@ -214,7 +214,7 @@ export default function QuizHistoryPage() {
                     </Badge>
                     <div className="text-xs text-muted-foreground flex items-center gap-1">
                       <Calendar className="h-3 w-3" />
-                      {format(new Date(submission.submittedAt), 'MMM dd, yyyy')}
+                      {format(submission.submittedAt instanceof Date ? submission.submittedAt : submission.submittedAt.toDate(), 'MMM dd, yyyy')}
                     </div>
                   </div>
                   
