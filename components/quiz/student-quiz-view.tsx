@@ -310,54 +310,58 @@ export function StudentQuizView({ quizId }: { quizId: string }) {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-background p-4 sm:p-8">
-      <header className="mb-8">
-        <h1 className="text-2xl sm:text-3xl font-bold">{quiz.title}</h1>
-        <p className="text-muted-foreground">{quiz.description}</p>
-        <div className="mt-4 flex items-center justify-between">
-            <div className="w-full">
-                <Progress value={progress} />
-                <p className="text-sm text-muted-foreground mt-1">Question {currentQuestionIndex + 1} of {quiz.questions.length}</p>
-            </div>
-            {timeLeft !== null && (
-                <div className="flex items-center text-lg font-semibold text-primary ml-8 whitespace-nowrap">
-                    <Clock className="mr-2 h-5 w-5" />
-                    <span>{Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}</span>
+    <div className="flex flex-col min-h-screen bg-background p-3 sm:p-4 lg:p-8">
+      <header className="mb-6 sm:mb-8">
+        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold">{quiz.title}</h1>
+        <p className="text-sm sm:text-base text-muted-foreground mt-1">{quiz.description}</p>
+        <div className="mt-3 sm:mt-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+                <div className="flex-1 min-w-0">
+                    <Progress value={progress} className="h-2 sm:h-3" />
+                    <p className="text-xs sm:text-sm text-muted-foreground mt-1">Question {currentQuestionIndex + 1} of {quiz.questions.length}</p>
                 </div>
-            )}
+                {timeLeft !== null && (
+                    <div className="flex items-center text-base sm:text-lg font-semibold text-primary whitespace-nowrap bg-primary/10 px-3 py-2 rounded-lg">
+                        <Clock className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+                        <span>{Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}</span>
+                    </div>
+                )}
+            </div>
         </div>
       </header>
       
-      <main className="flex-grow flex items-center justify-center">
-        <Card className="w-full max-w-3xl">
-          <CardHeader>
-            <CardTitle className="text-xl sm:text-2xl leading-relaxed">{currentQuestion.text}</CardTitle>
+      <main className="flex-grow flex items-start sm:items-center justify-center">
+        <Card className="w-full max-w-4xl">
+          <CardHeader className="pb-4 sm:pb-6">
+            <CardTitle className="text-base sm:text-lg lg:text-xl leading-relaxed">{currentQuestion.text}</CardTitle>
           </CardHeader>
-          <CardContent className="min-h-[200px]">
+          <CardContent className="min-h-[150px] sm:min-h-[200px]">
             {currentQuestion.type === "multiple-choice" && (
-                <div className="space-y-3">
+                <div className="space-y-2 sm:space-y-3">
                     {currentQuestion.options.map(option => (
-                        <div key={option.id} className="flex flex-wrap items-center space-x-3 p-3 border rounded-md has-[:checked]:bg-primary/10 has-[:checked]:border-primary transition-all">
-                            <Checkbox id={`${currentQuestion.id}-${option.id}`}
+                        <div key={option.id} className="flex items-start space-x-3 p-3 sm:p-4 border rounded-lg has-[:checked]:bg-primary/10 has-[:checked]:border-primary transition-all touch-manipulation">
+                            <Checkbox
+                                id={`${currentQuestion.id}-${option.id}`}
                                 onCheckedChange={(checked) => {
                                     const currentAnswers = answers[currentQuestion.id] || [];
                                     const newAnswers = checked ? [...currentAnswers, option.id] : currentAnswers.filter(id => id !== option.id);
                                     handleAnswerChange(currentQuestion.id, newAnswers);
                                 }}
                                 checked={answers[currentQuestion.id]?.includes(option.id)}
+                                className="mt-0.5 h-5 w-5 sm:h-6 sm:w-6"
                             />
-                            <Label htmlFor={`${currentQuestion.id}-${option.id}`} className="text-base cursor-pointer flex-1">{option.text}</Label>
+                            <Label htmlFor={`${currentQuestion.id}-${option.id}`} className="text-sm sm:text-base cursor-pointer flex-1 leading-relaxed touch-target">{option.text}</Label>
                         </div>
                     ))}
                 </div>
             )}
              {currentQuestion.type === "true-false" && (
                 <RadioGroup onValueChange={(value) => handleAnswerChange(currentQuestion.id, value)} value={(answers[currentQuestion.id] || [])[0]}>
-                    <div className="space-y-3">
+                    <div className="space-y-2 sm:space-y-3">
                     {currentQuestion.options.map(option => (
-                        <div key={option.id} className="flex flex-wrap items-center space-x-3 p-3 border rounded-md has-[:checked]:bg-primary/10 has-[:checked]:border-primary transition-all">
-                            <RadioGroupItem value={option.id} id={`${currentQuestion.id}-${option.id}`} />
-                            <Label htmlFor={`${currentQuestion.id}-${option.id}`} className="text-base cursor-pointer flex-1">{option.text}</Label>
+                        <div key={option.id} className="flex items-start space-x-3 p-3 sm:p-4 border rounded-lg has-[:checked]:bg-primary/10 has-[:checked]:border-primary transition-all touch-manipulation">
+                            <RadioGroupItem value={option.id} id={`${currentQuestion.id}-${option.id}`} className="mt-0.5 h-5 w-5 sm:h-6 sm:w-6" />
+                            <Label htmlFor={`${currentQuestion.id}-${option.id}`} className="text-sm sm:text-base cursor-pointer flex-1 leading-relaxed touch-target">{option.text}</Label>
                         </div>
                     ))}
                     </div>
@@ -366,30 +370,47 @@ export function StudentQuizView({ quizId }: { quizId: string }) {
              {(currentQuestion.type === "short-answer" || currentQuestion.type === "fill-in-the-blank") && (
                 <Input
                     type="text"
-                    className="mt-2 w-full p-2 border rounded-md"
-                    placeholder="Your answer..."
+                    className="mt-2 w-full p-3 sm:p-4 border rounded-lg text-sm sm:text-base touch-target"
+                    placeholder="Type your answer here..."
                     onChange={(e) => handleAnswerChange(currentQuestion.id, e.target.value)}
                     value={(answers[currentQuestion.id] || [])[0] || ""}
                 />
             )}
           </CardContent>
-          <CardFooter className="flex justify-between">
-            <Button variant="outline" onClick={handlePrev} disabled={currentQuestionIndex === 0}>
-                <ArrowLeft className="mr-2 h-4 w-4" /> Previous
+          <CardFooter className="flex flex-col sm:flex-row gap-3 sm:gap-0 sm:justify-between pt-4 sm:pt-6">
+            <Button
+                variant="outline"
+                onClick={handlePrev}
+                disabled={currentQuestionIndex === 0}
+                className="w-full sm:w-auto order-2 sm:order-1 touch-target"
+                size="sm"
+            >
+                <ArrowLeft className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="text-xs sm:text-sm">Previous</span>
             </Button>
             {currentQuestionIndex < quiz.questions.length - 1 ? (
-                 <Button onClick={handleNext}>
-                    Next <ArrowRight className="ml-2 h-4 w-4" />
+                 <Button
+                    onClick={handleNext}
+                    className="w-full sm:w-auto order-1 sm:order-2 touch-target"
+                    size="sm"
+                 >
+                    <span className="text-xs sm:text-sm">Next</span>
+                    <ArrowRight className="ml-2 h-3 w-3 sm:h-4 sm:w-4" />
                 </Button>
             ) : (
-                <Button onClick={handleSubmit} className="bg-green-600 hover:bg-green-700" disabled={isSubmitting}>
+                <Button
+                    onClick={handleSubmit}
+                    className="bg-green-600 hover:bg-green-700 w-full sm:w-auto order-1 sm:order-2 touch-target"
+                    disabled={isSubmitting}
+                    size="sm"
+                >
                     {isSubmitting ? (
                       <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Submitting...
+                        <Loader2 className="mr-2 h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
+                        <span className="text-xs sm:text-sm">Submitting...</span>
                       </>
                     ) : (
-                      'Submit Quiz'
+                      <span className="text-xs sm:text-sm">Submit Quiz</span>
                     )}
                 </Button>
             )}

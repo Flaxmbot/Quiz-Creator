@@ -11,15 +11,37 @@ import {
   SidebarInset,
   SidebarTrigger,
 } from "@/components/ui/sidebar"
-import { CheckCircle, Home, User, Settings, PlusCircle } from "lucide-react"
+import { CheckCircle, Home, User, Settings, PlusCircle, BookOpen } from "lucide-react"
 import Link from "next/link"
 import { AuthGuard } from "@/components/auth/auth-guard";
+import { useAuthState } from "react-firebase-hooks/auth";
+import { auth } from "@/lib/firebase";
+import { getUserProfile } from "@/lib/firestore";
+import { useState, useEffect } from "react";
+import type { User as UserType } from "@/lib/types";
 
 function DashboardLayoutContent({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const [user] = useAuthState(auth);
+  const [userProfile, setUserProfile] = useState<UserType | null>(null);
+
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (user) {
+        try {
+          const profile = await getUserProfile(user.uid);
+          setUserProfile(profile);
+        } catch (error) {
+          console.error("Error fetching user profile:", error);
+        }
+      }
+    };
+
+    fetchUserProfile();
+  }, [user]);
 
   return (
     <SidebarProvider>
@@ -39,18 +61,32 @@ function DashboardLayoutContent({
               <SidebarMenuButton asChild className="group hover:bg-primary/10 hover:text-primary transition-all duration-300 rounded-xl">
                 <Link href="/dashboard" className="flex items-center gap-3 p-3">
                   <Home className="w-5 h-5 group-hover:animate-pulse" />
-                  <span className="font-medium">My Quizzes</span>
+                  <span className="font-medium">
+                    {userProfile?.role === 'student' ? 'Available Quizzes' : 'My Quizzes'}
+                  </span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild className="group hover:bg-primary/10 hover:text-primary transition-all duration-300 rounded-xl">
-                <Link href="/create" className="flex items-center gap-3 p-3">
-                  <PlusCircle className="w-5 h-5 group-hover:animate-pulse" />
-                  <span className="font-medium">Create Quiz</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
+            {userProfile?.role === 'teacher' && (
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild className="group hover:bg-primary/10 hover:text-primary transition-all duration-300 rounded-xl">
+                  <Link href="/create" className="flex items-center gap-3 p-3">
+                    <PlusCircle className="w-5 h-5 group-hover:animate-pulse" />
+                    <span className="font-medium">Create Quiz</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            )}
+            {userProfile?.role === 'student' && (
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild className="group hover:bg-primary/10 hover:text-primary transition-all duration-300 rounded-xl">
+                  <Link href="/dashboard/history" className="flex items-center gap-3 p-3">
+                    <BookOpen className="w-5 h-5 group-hover:animate-pulse" />
+                    <span className="font-medium">Quiz History</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            )}
             <SidebarMenuItem>
               <SidebarMenuButton asChild className="group hover:bg-primary/10 hover:text-primary transition-all duration-300 rounded-xl">
                 <Link href="/dashboard/profile" className="flex items-center gap-3 p-3">

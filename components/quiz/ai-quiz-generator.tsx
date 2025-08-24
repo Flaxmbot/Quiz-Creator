@@ -144,9 +144,9 @@ export function AIQuizGenerator({
           </DialogDescription>
         </DialogHeader>
         
-        <div className="grid gap-6 py-4">
+        <div className="grid gap-4 sm:gap-6 py-4">
           <div className="space-y-2">
-            <Label htmlFor="topic">Topic *</Label>
+            <Label htmlFor="topic" className="text-sm sm:text-base">Topic *</Label>
             <Input
               id="topic"
               name="topic"
@@ -154,14 +154,15 @@ export function AIQuizGenerator({
               onChange={handleInputChange}
               placeholder="e.g., World War II, Photosynthesis, JavaScript Basics"
               disabled={isGenerating}
+              className="text-sm sm:text-base"
             />
           </div>
 
           <div className="space-y-2">
-            <Label>Question Types *</Label>
-            <div className="grid grid-cols-2 gap-3">
+            <Label className="text-sm sm:text-base">Question Types *</Label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
               {questionTypeOptions.map((option) => (
-                <div key={option.value} className="flex items-center space-x-2">
+                <div key={option.value} className="flex items-center space-x-2 p-2 sm:p-3 rounded-lg has-[:checked]:bg-primary/10 has-[:checked]:border-primary transition-all">
                   <Checkbox
                     id={option.value}
                     checked={formData.questionTypes.includes(option.value)}
@@ -169,8 +170,9 @@ export function AIQuizGenerator({
                       handleQuestionTypeChange(option.value, checked as boolean)
                     }
                     disabled={isGenerating}
+                    className="h-4 w-4 sm:h-5 sm:w-5"
                   />
-                  <Label htmlFor={option.value} className="text-sm">
+                  <Label htmlFor={option.value} className="text-xs sm:text-sm">
                     {option.label}
                   </Label>
                 </div>
@@ -179,7 +181,7 @@ export function AIQuizGenerator({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="numberOfQuestions">Number of Questions</Label>
+            <Label htmlFor="numberOfQuestions" className="text-sm sm:text-base">Number of Questions</Label>
             <Input
               id="numberOfQuestions"
               name="numberOfQuestions"
@@ -189,33 +191,34 @@ export function AIQuizGenerator({
               value={formData.numberOfQuestions}
               onChange={handleInputChange}
               disabled={isGenerating}
+              className="text-sm sm:text-base"
             />
           </div>
 
           <div className="space-y-2">
-            <Label>Difficulty Level</Label>
+            <Label className="text-sm sm:text-base">Difficulty Level</Label>
             <RadioGroup
               value={formData.difficultyLevel}
               onValueChange={handleDifficultyChange}
               disabled={isGenerating}
             >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="easy" id="easy" />
-                <Label htmlFor="easy">Easy</Label>
+              <div className="flex items-center space-x-2 p-2 sm:p-3 rounded-lg has-[:checked]:bg-primary/10 has-[:checked]:border-primary transition-all">
+                <RadioGroupItem value="easy" id="easy" className="h-4 w-4 sm:h-5 sm:w-5" />
+                <Label htmlFor="easy" className="text-xs sm:text-sm">Easy</Label>
               </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="medium" id="medium" />
-                <Label htmlFor="medium">Medium</Label>
+              <div className="flex items-center space-x-2 p-2 sm:p-3 rounded-lg has-[:checked]:bg-primary/10 has-[:checked]:border-primary transition-all">
+                <RadioGroupItem value="medium" id="medium" className="h-4 w-4 sm:h-5 sm:w-5" />
+                <Label htmlFor="medium" className="text-xs sm:text-sm">Medium</Label>
               </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="hard" id="hard" />
-                <Label htmlFor="hard">Hard</Label>
+              <div className="flex items-center space-x-2 p-2 sm:p-3 rounded-lg has-[:checked]:bg-primary/10 has-[:checked]:border-primary transition-all">
+                <RadioGroupItem value="hard" id="hard" className="h-4 w-4 sm:h-5 sm:w-5" />
+                <Label htmlFor="hard" className="text-xs sm:text-sm">Hard</Label>
               </div>
             </RadioGroup>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="additionalInstructions">Additional Instructions (Optional)</Label>
+            <Label htmlFor="additionalInstructions" className="text-sm sm:text-base">Additional Instructions (Optional)</Label>
             <Textarea
               id="additionalInstructions"
               name="additionalInstructions"
@@ -223,6 +226,7 @@ export function AIQuizGenerator({
               onChange={handleInputChange}
               placeholder="Any specific requirements or context for the quiz..."
               disabled={isGenerating}
+              className="text-sm sm:text-base"
             />
           </div>
         </div>
@@ -232,10 +236,11 @@ export function AIQuizGenerator({
             variant="outline"
             onClick={() => setIsOpen(false)}
             disabled={isGenerating}
+            className="touch-target"
           >
             Cancel
           </Button>
-          <Button onClick={handleGenerate} disabled={isGenerating}>
+          <Button onClick={handleGenerate} disabled={isGenerating} className="touch-target">
             {isGenerating ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

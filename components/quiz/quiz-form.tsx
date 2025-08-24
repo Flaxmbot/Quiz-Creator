@@ -236,10 +236,10 @@ export function QuizForm() {
         onQuizGenerated={handleAIQuizGenerated}
       />
 
-      <div className="p-6 border rounded-lg bg-card">
+      <div className="p-4 sm:p-6 border rounded-lg bg-card">
         <div className="space-y-4">
           <div>
-            <Label htmlFor="title" className="text-lg">Quiz Title</Label>
+            <Label htmlFor="title" className="text-base sm:text-lg">Quiz Title</Label>
             <Input
               id="title"
               name="title"
@@ -250,7 +250,7 @@ export function QuizForm() {
             />
           </div>
           <div>
-            <Label htmlFor="description" className="text-lg">Description</Label>
+            <Label htmlFor="description" className="text-base sm:text-lg">Description</Label>
             <Textarea
               id="description"
               name="description"
@@ -280,13 +280,13 @@ export function QuizForm() {
         ))}
       </div>
 
-      <div className="flex justify-between items-center">
-        <div className="flex gap-2">
+      <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 sm:justify-between sm:items-center">
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-2 w-full sm:w-auto">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" disabled={isSaving}>
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Add Question
+              <Button variant="outline" disabled={isSaving} className="w-full sm:w-auto" size="sm">
+                <PlusCircle className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="text-xs sm:text-sm">Add Question</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
@@ -309,20 +309,21 @@ export function QuizForm() {
             variant="outline"
             onClick={() => setIsAIGeneratorOpen(true)}
             disabled={isSaving}
-            className="border-primary text-primary hover:bg-primary hover:text-primary-foreground"
+            className="border-primary text-primary hover:bg-primary hover:text-primary-foreground w-full sm:w-auto"
+            size="sm"
           >
-            <Wand2 className="mr-2 h-4 w-4" />
-            Generate with AI
+            <Wand2 className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+            <span className="text-xs sm:text-sm">Generate with AI</span>
           </Button>
         </div>
 
-        <Button onClick={handleSave} disabled={isSaving || loading}>
+        <Button onClick={handleSave} disabled={isSaving || loading} className="w-full sm:w-auto touch-target" size="sm">
           {isSaving
             ? (editQuizId ? "Updating..." : "Saving...")
             : (
               <>
-                <Save className="mr-2 h-4 w-4" />
-                {editQuizId ? "Update Quiz" : "Save Quiz"}
+                <Save className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="text-xs sm:text-sm">{editQuizId ? "Update Quiz" : "Save Quiz"}</span>
               </>
             )
           }

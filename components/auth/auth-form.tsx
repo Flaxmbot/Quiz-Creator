@@ -25,6 +25,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { handleGenericError } from "@/lib/error-handling";
+import { createUserProfile } from "@/lib/firestore";
 
 interface AuthFormProps {
   type: "login" | "register";
@@ -124,6 +125,13 @@ export function AuthForm({ type }: AuthFormProps) {
           displayName: formData.displayName,
         });
 
+        // Create user profile in Firestore
+        await createUserProfile(userCredential.user.uid, {
+          email: formData.email,
+          displayName: formData.displayName,
+          role: userType as 'teacher' | 'student',
+        });
+
         toast({
           title: "Account Created",
           description: "Your account has been created successfully!",
@@ -153,7 +161,18 @@ export function AuthForm({ type }: AuthFormProps) {
     setIsLoading(true);
     const provider = new GoogleAuthProvider();
     try {
-      await signInWithPopup(auth, provider);
+      const result = await signInWithPopup(auth, provider);
+      
+      // Create user profile if it's a new user
+      if (type === "register") {
+        await createUserProfile(result.user.uid, {
+          email: result.user.email || '',
+          displayName: result.user.displayName || '',
+          photoURL: result.user.photoURL || '',
+          role: userType as 'teacher' | 'student',
+        });
+      }
+
       toast({
         title: "Authentication Successful",
         description: "Redirecting you to the dashboard...",
@@ -174,29 +193,29 @@ export function AuthForm({ type }: AuthFormProps) {
 
   return (
     <div className="w-full max-w-md">
-       <div className="flex items-center justify-center gap-2 mb-6">
-            <CheckCircle className="w-8 h-8 text-primary" />
-            <span className="text-2xl font-bold text-foreground">QuizLink</span>
+       <div className="flex items-center justify-center gap-2 mb-4 sm:mb-6">
+            <CheckCircle className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
+            <span className="text-xl sm:text-2xl font-bold text-foreground">QuizLink</span>
         </div>
       <Tabs defaultValue="teacher" className="w-full" onValueChange={setUserType}>
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="teacher">Teacher</TabsTrigger>
-          <TabsTrigger value="student">Student</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-2 h-10 sm:h-11">
+          <TabsTrigger value="teacher" className="text-sm sm:text-base">Teacher</TabsTrigger>
+          <TabsTrigger value="student" className="text-sm sm:text-base">Student</TabsTrigger>
         </TabsList>
         <TabsContent value="teacher">
           <Card>
-            <CardHeader>
-              <CardTitle>{title} as a Teacher</CardTitle>
-              <CardDescription>{description}</CardDescription>
+            <CardHeader className="pb-4 sm:pb-6">
+              <CardTitle className="text-lg sm:text-xl">{title} as a Teacher</CardTitle>
+              <CardDescription className="text-sm sm:text-base">{description}</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-3 sm:space-y-4">
               <div className="flex gap-2">
                 <Button
                   type="button"
                   variant={authMethod === "google" ? "default" : "outline"}
                   size="sm"
                   onClick={() => setAuthMethod("google")}
-                  className="flex-1"
+                  className="flex-1 text-xs sm:text-sm"
                 >
                   Google
                 </Button>
@@ -205,14 +224,14 @@ export function AuthForm({ type }: AuthFormProps) {
                   variant={authMethod === "email" ? "default" : "outline"}
                   size="sm"
                   onClick={() => setAuthMethod("email")}
-                  className="flex-1"
+                  className="flex-1 text-xs sm:text-sm"
                 >
                   Email
                 </Button>
               </div>
 
               {authMethod === "google" ? (
-                <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={isLoading}>
+                <Button variant="outline" className="w-full text-sm sm:text-base touch-manipulation" onClick={handleGoogleSignIn} disabled={isLoading}>
                   {isLoading ? "Redirecting..." : <><GoogleIcon /> Sign in with Google</>}
                 </Button>
               ) : (
@@ -226,6 +245,7 @@ export function AuthForm({ type }: AuthFormProps) {
                         value={formData.displayName}
                         onChange={handleInputChange}
                         disabled={isLoading}
+                        className="text-sm sm:text-base"
                       />
                     </div>
                   )}
@@ -237,6 +257,7 @@ export function AuthForm({ type }: AuthFormProps) {
                       value={formData.email}
                       onChange={handleInputChange}
                       disabled={isLoading}
+                      className="text-sm sm:text-base"
                     />
                   </div>
                   <div>
@@ -247,6 +268,7 @@ export function AuthForm({ type }: AuthFormProps) {
                       value={formData.password}
                       onChange={handleInputChange}
                       disabled={isLoading}
+                      className="text-sm sm:text-base"
                     />
                   </div>
                   {type === "register" && (
@@ -298,7 +320,7 @@ export function AuthForm({ type }: AuthFormProps) {
               </div>
 
               {authMethod === "google" ? (
-                <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={isLoading}>
+                <Button variant="outline" className="w-full text-sm sm:text-base touch-manipulation" onClick={handleGoogleSignIn} disabled={isLoading}>
                   {isLoading ? "Redirecting..." : <><GoogleIcon /> Sign in with Google</>}
                 </Button>
               ) : (
@@ -312,6 +334,7 @@ export function AuthForm({ type }: AuthFormProps) {
                         value={formData.displayName}
                         onChange={handleInputChange}
                         disabled={isLoading}
+                        className="text-sm sm:text-base"
                       />
                     </div>
                   )}
@@ -323,6 +346,7 @@ export function AuthForm({ type }: AuthFormProps) {
                       value={formData.email}
                       onChange={handleInputChange}
                       disabled={isLoading}
+                      className="text-sm sm:text-base"
                     />
                   </div>
                   <div>
@@ -333,6 +357,7 @@ export function AuthForm({ type }: AuthFormProps) {
                       value={formData.password}
                       onChange={handleInputChange}
                       disabled={isLoading}
+                      className="text-sm sm:text-base"
                     />
                   </div>
                   {type === "register" && (

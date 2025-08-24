@@ -164,89 +164,89 @@ export default function ResultsPage() {
 
   return (
     <PageLayout>
-      <div className="container mx-auto px-4 py-8 space-y-8 max-w-7xl">
+      <div className="container mx-auto px-3 sm:px-4 lg:px-6 py-6 sm:py-8 space-y-6 sm:space-y-8 max-w-7xl">
         {/* Header Section */}
-      <div className="text-center space-y-4">
-        <h1 className="text-4xl font-bold">
+      <div className="text-center space-y-3 sm:space-y-4">
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold px-4">
           {quiz.title}
         </h1>
-        <p className="text-xl text-muted-foreground">Quiz Results & Analytics</p>
-        <div className="flex justify-center items-center gap-4">
-          <Badge variant="outline" className="px-6 py-2 text-lg bg-primary/10 border-primary/30">
-            <Target className="w-5 h-5 mr-2" />
+        <p className="text-base sm:text-lg lg:text-xl text-muted-foreground px-4">Quiz Results & Analytics</p>
+        <div className="flex flex-col sm:flex-row justify-center items-center gap-3 sm:gap-4 px-4">
+          <Badge variant="outline" className="px-4 sm:px-6 py-2 text-sm sm:text-base lg:text-lg bg-primary/10 border-primary/30 w-full sm:w-auto justify-center">
+            <Target className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
             {results.length} Participants
           </Badge>
           <button 
             onClick={shareQuizResults}
-            className="flex items-center gap-2 px-4 py-2 text-sm bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded-lg transition-all duration-200"
+            className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 text-xs sm:text-sm bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded-lg transition-all duration-200 w-full sm:w-auto touch-manipulation"
           >
-            {copied ? <Check className="w-4 h-4" /> : <Share2 className="w-4 h-4" />}
+            {copied ? <Check className="w-3 w-3 sm:w-4 sm:h-4" /> : <Share2 className="w-3 h-3 sm:w-4 sm:h-4" />}
             {copied ? "Copied!" : "Share Results"}
           </button>
         </div>
       </div>
 
       {/* Key Metrics Grid */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:gap-6 grid-cols-2 lg:grid-cols-4">
         <Card className="futuristic-card hover:neon-glow transition-all duration-300 group">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Participants</CardTitle>
-            <Users className="h-6 w-6 text-primary group-hover:animate-pulse" />
+            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Total Participants</CardTitle>
+            <Users className="h-4 w-4 sm:h-6 sm:w-6 text-primary group-hover:animate-pulse" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-primary">{results.length}</div>
-            <p className="text-xs text-muted-foreground mt-2">Active participants</p>
+            <div className="text-2xl sm:text-3xl font-bold text-primary">{results.length}</div>
+            <p className="text-xs text-muted-foreground mt-1 sm:mt-2">Active participants</p>
           </CardContent>
         </Card>
 
         <Card className="futuristic-card hover:neon-glow transition-all duration-300 group">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Average Score</CardTitle>
-            <TrendingUp className="h-6 w-6 text-blue-400 group-hover:animate-pulse" />
+            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Average Score</CardTitle>
+            <TrendingUp className="h-4 w-4 sm:h-6 sm:w-6 text-blue-400 group-hover:animate-pulse" />
           </CardHeader>
           <CardContent>
-            <div className={`text-3xl font-bold ${getScoreColor(averageScore)}`}>
+            <div className={`text-2xl sm:text-3xl font-bold ${getScoreColor(averageScore)}`}>
               {averageScore.toFixed(1)}%
             </div>
-            <Progress value={averageScore} className="mt-2 h-2" />
+            <Progress value={averageScore} className="mt-1 sm:mt-2 h-2" />
           </CardContent>
         </Card>
 
         <Card className="futuristic-card hover:neon-glow transition-all duration-300 group">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Pass Rate</CardTitle>
-            <Award className="h-6 w-6 text-green-400 group-hover:animate-pulse" />
+            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Pass Rate</CardTitle>
+            <Award className="h-4 w-4 sm:h-6 sm:w-6 text-green-400 group-hover:animate-pulse" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-green-400">{passRate.toFixed(1)}%</div>
-            <p className="text-xs text-muted-foreground mt-2">Scored ≥70%</p>
+            <div className="text-2xl sm:text-3xl font-bold text-green-400">{passRate.toFixed(1)}%</div>
+            <p className="text-xs text-muted-foreground mt-1 sm:mt-2">Scored ≥70%</p>
           </CardContent>
         </Card>
 
         <Card className="futuristic-card hover:neon-glow transition-all duration-300 group">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">High Score</CardTitle>
-            <Zap className="h-6 w-6 text-yellow-400 group-hover:animate-pulse" />
+            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">High Score</CardTitle>
+            <Zap className="h-4 w-4 sm:h-6 sm:w-6 text-yellow-400 group-hover:animate-pulse" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-yellow-400">{maxScore.toFixed(1)}%</div>
-            <p className="text-xs text-muted-foreground mt-2">Best performance</p>
+            <div className="text-2xl sm:text-3xl font-bold text-yellow-400">{maxScore.toFixed(1)}%</div>
+            <p className="text-xs text-muted-foreground mt-1 sm:mt-2">Best performance</p>
           </CardContent>
         </Card>
       </div>
 
       {/* Charts Section */}
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
         {/* Score Distribution Bar Chart */}
         <Card className="futuristic-card">
           <CardHeader>
-            <CardTitle className="flex items-center gap-3">
-              <BarChart className="w-6 h-6 text-primary" />
+            <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+              <BarChart className="w-4 h-4 sm:w-6 sm:h-6 text-primary" />
               Score Distribution
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={250}>
               <BarChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(139, 69, 255, 0.1)" />
                 <XAxis 
@@ -285,13 +285,13 @@ export default function ResultsPage() {
         {/* Performance Overview Pie Chart */}
         <Card className="futuristic-card">
           <CardHeader>
-            <CardTitle className="flex items-center gap-3">
-              <Target className="w-6 h-6 text-primary" />
+            <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+              <Target className="w-4 h-4 sm:w-6 sm:h-6 text-primary" />
               Performance Breakdown
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={250}>
               <PieChart>
                 <Pie
                   data={pieData}

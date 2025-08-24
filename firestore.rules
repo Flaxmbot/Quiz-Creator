@@ -10,7 +10,7 @@ service cloud.firestore {
     match /quizzes/{quizId} {
       // Authors can read, update, and delete their own quizzes.
       // Any authenticated user can read a published quiz.
-      allow read: if request.auth != null && (resource.data.authorId == request.auth.uid || resource.data.isPublished == true);
+      allow read: if request.auth != null && (request.auth.uid == resource.data.authorId || resource.data.isPublished == true);
       allow update, delete: if request.auth != null && request.auth.uid == resource.data.authorId;
 
       // Authenticated users can create quizzes for themselves.

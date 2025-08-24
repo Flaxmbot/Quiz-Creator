@@ -248,12 +248,75 @@
     text-wrap: balance;
   }
   
+  /* Mobile touch improvements */
+  .touch-manipulation {
+    touch-action: manipulation;
+  }
+  
+  /* Larger touch targets for mobile */
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  @media (max-width: 640px) {
+    /* Improve button touch areas */
+    button {
+      min-height: 44px;
+    }
+    
+    /* Better spacing for mobile forms */
+    .form-mobile {
+      padding: 1rem;
+    }
+    
+    /* Hide decorative elements on mobile for performance */
+    .mobile-hide {
+      display: none;
+    }
+    
+    /* Adjust card padding for mobile */
+    .futuristic-card {
+      padding: 1rem;
+    }
+    
+    /* Adjust input sizes for mobile */
+    input, textarea, select {
+      min-height: 44px;
+      padding: 0.75rem;
+    }
+    
+    /* Adjust button sizes for mobile */
+    .cyber-button {
+      padding: 0.75rem 1.5rem;
+    }
+  }
+  
   /* Responsive animations - disable on mobile for performance */
   @media (prefers-reduced-motion: reduce) {
     .gradient-animate,
     .float-animation,
     .glow-pulse {
       animation: none;
+    }
+  }
+  
+  /* Mobile-specific adjustments */
+  @media (max-width: 768px) {
+    /* Adjust card layouts for mobile */
+    .futuristic-card {
+      margin-bottom: 1rem;
+    }
+    
+    /* Adjust grid layouts for mobile */
+    .grid {
+      gap: 1rem;
+    }
+    
+    /* Adjust padding for mobile */
+    .container {
+      padding-left: 1rem;
+      padding-right: 1rem;
     }
   }
   

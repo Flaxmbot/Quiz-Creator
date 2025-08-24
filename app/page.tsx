@@ -1,5 +1,6 @@
 "use client";
 
+import React from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { CheckCircle, Edit, Share2, BarChart2, Wand2 } from 'lucide-react'
@@ -32,34 +33,36 @@ const features = [
 export default function Home() {
   return (
     <PageLayout>
-      <section className="text-center container mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-32 bg-gradient-to-b from-background to-muted">
-        <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight text-foreground leading-tight">
+      <section className="text-center container mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 md:py-20 lg:py-32 bg-gradient-to-b from-background to-muted">
+        <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-extrabold tracking-tight text-foreground leading-tight">
           Create Engaging Quizzes in Minutes
         </h1>
-        <p className="mt-6 max-w-3xl mx-auto text-xl md:text-2xl text-muted-foreground leading-relaxed">
+        <p className="mt-4 sm:mt-6 max-w-xs sm:max-w-lg md:max-w-2xl lg:max-w-3xl mx-auto text-base sm:text-lg md:text-xl lg:text-2xl text-muted-foreground leading-relaxed">
           QuizLink is the simplest way for teachers to build, share, and analyze quizzes. Powered by AI to help you create better questions, faster.
         </p>
-        <div className="mt-10">
-          <Button size="lg" asChild>
+        <div className="mt-8 sm:mt-10">
+          <Button size="lg" asChild className="w-full sm:w-auto">
             <Link href="/create">Create Your First Quiz</Link>
           </Button>
         </div>
       </section>
 
-      <section className="bg-background py-20 md:py-24">
+      <section className="bg-background py-12 sm:py-16 md:py-20 lg:py-24">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl sm:text-4xl font-bold text-center text-foreground mb-16">Why Choose QuizLink?</h2>
-          <div className="mt-12 grid gap-8 md:grid-cols-2 lg:grid-cols-4">
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-center text-foreground mb-8 sm:mb-12 lg:mb-16">Why Choose QuizLink?</h2>
+          <div className="mt-8 sm:mt-12 grid gap-6 sm:gap-8 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
             {features.map((feature) => (
-              <Card key={feature.title} className="text-center shadow-medium hover:shadow-strong transition-shadow duration-300 p-6 h-full">
-                <CardHeader>
-                  <div className="mx-auto bg-primary/10 rounded-full w-16 h-16 flex items-center justify-center">
-                    {feature.icon}
+              <Card key={feature.title} className="text-center shadow-medium hover:shadow-strong transition-shadow duration-300 p-4 sm:p-6 h-full">
+                <CardHeader className="pb-3 sm:pb-6">
+                  <div className="mx-auto bg-primary/10 rounded-full w-12 h-12 sm:w-16 sm:h-16 flex items-center justify-center">
+                    <div className="w-6 h-6 sm:w-8 sm:h-8 text-primary">
+                      {React.cloneElement(feature.icon, { className: "w-full h-full text-primary" })}
+                    </div>
                   </div>
                 </CardHeader>
-                <CardContent>
-                  <h3 className="text-xl font-semibold text-foreground mt-4">{feature.title}</h3>
-                  <p className="mt-2 text-muted-foreground">{feature.description}</p>
+                <CardContent className="space-y-2 sm:space-y-3">
+                  <h3 className="text-lg sm:text-xl font-semibold text-foreground">{feature.title}</h3>
+                  <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">{feature.description}</p>
                 </CardContent>
               </Card>
             ))}
