@@ -450,7 +450,7 @@ export async function getFeaturedQuizzes(quizLimit: number = 10): Promise<Quiz[]
       collection(db, "quizzes"),
       where("isPublic", "==", true),
       where("isPublished", "==", true),
-      orderBy("submissionCount", "desc"),
+      orderBy("createdAt", "desc"),
       limit(quizLimit)
     );
     const querySnapshot = await getDocs(q);
@@ -477,6 +477,7 @@ export async function getAllTeacherQuizzes(): Promise<Quiz[]> {
   const { data, error } = await safeAsync(async () => {
     const q = query(
       collection(db, "quizzes"),
+      where("isPublished", "==", true),
       orderBy("createdAt", "desc")
     );
     const querySnapshot = await getDocs(q);

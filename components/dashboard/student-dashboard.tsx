@@ -185,7 +185,7 @@ export function StudentDashboard({ className }: StudentDashboardProps) {
               <Card key={quiz.id} className="futuristic-card hover:neon-glow transition-all duration-300">
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between gap-2">
-                    <CardTitle className="text-sm sm:text-base font-semibold line-clamp-1">
+                    <CardTitle className="text-sm sm:text-base font-semibold">
                       {quiz.title}
                     </CardTitle>
                     {hasUserTakenQuiz(quiz.id) && (
@@ -194,7 +194,7 @@ export function StudentDashboard({ className }: StudentDashboardProps) {
                       </Badge>
                     )}
                   </div>
-                  <CardDescription className="text-xs sm:text-sm line-clamp-2">
+                  <CardDescription className="text-xs sm:text-sm">
                     {quiz.description}
                   </CardDescription>
                 </CardHeader>
@@ -299,7 +299,7 @@ export function StudentDashboard({ className }: StudentDashboardProps) {
               <Card key={quiz.id} className="futuristic-card hover:neon-glow transition-all duration-300">
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between gap-2">
-                    <CardTitle className="text-sm sm:text-base font-semibold line-clamp-1">
+                    <CardTitle className="text-sm sm:text-base font-semibold">
                       {quiz.title}
                     </CardTitle>
                     {hasUserTakenQuiz(quiz.id) && (
@@ -308,7 +308,7 @@ export function StudentDashboard({ className }: StudentDashboardProps) {
                       </Badge>
                     )}
                   </div>
-                  <CardDescription className="text-xs sm:text-sm line-clamp-2">
+                  <CardDescription className="text-xs sm:text-sm">
                     {quiz.description}
                   </CardDescription>
                 </CardHeader>
