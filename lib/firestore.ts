@@ -475,48 +475,22 @@ export async function getFeaturedQuizzes(quizLimit: number = 10): Promise<Quiz[]
  */
 export async function getAllTeacherQuizzes(): Promise<Quiz[]> {
   const { data, error } = await safeAsync(async () => {
-    try {
-      const q = query(
-        collection(db, "quizzes"),
-        where("isPublished", "==", true),
-        orderBy("createdAt", "desc")
-      );
-      
-      // Debug logging
-      console.log("Fetching all published quizzes with query:", q);
-      
-      const querySnapshot = await getDocs(q);
-      
-      // Debug logging
-      console.log("Query snapshot size:", querySnapshot.size);
-      console.log("Query snapshot docs:", querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })));
-      
-      const quizzes = querySnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate?.() || new Date(),
-        updatedAt: doc.data().updatedAt?.toDate?.() || new Date(),
-      })) as Quiz[];
-      
-      console.log("Processed quizzes:", quizzes);
-      
-      return quizzes;
-    } catch (err) {
-      console.error("Error in getAllTeacherQuizzes query:", err);
-      throw err;
-    }
+    const q = query(
+      collection(db, "quizzes"),
+      orderBy("createdAt", "desc")
+    );
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+      createdAt: doc.data().createdAt?.toDate?.() || new Date(),
+      updatedAt: doc.data().updatedAt?.toDate?.() || new Date(),
+    })) as Quiz[];
   }, "getAllTeacherQuizzes");
 
   if (error) {
-    console.error("Error in getAllTeacherQuizzes:", error);
     throw new Error(error.message);
   }
 
-  // Debug logging
-  console.log("getAllTeacherQuizzes returning:", data?.length || 0, "quizzes");
-  
   return data || [];
 }
