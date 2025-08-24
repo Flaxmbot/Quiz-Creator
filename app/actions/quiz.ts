@@ -35,7 +35,7 @@ export async function generateQuizAction(input: GenerateQuizInput) {
     const result = await generateQuiz(input);
     return { success: true, data: result };
   } catch (error) {
-    console.error('AI Quiz Generation Error:', error);
+    console.error('AI Quiz Generation Error:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
     return { success: false, error: 'An unexpected error occurred while generating the quiz.' };
   }
 }

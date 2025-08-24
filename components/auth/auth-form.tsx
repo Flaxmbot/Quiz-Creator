@@ -14,9 +14,17 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from "next/link";
 import { CheckCircle } from "lucide-react";
 import { auth } from "@/lib/firebase";
-import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import {
+  GoogleAuthProvider,
+  signInWithPopup,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  updateProfile
+} from "firebase/auth";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
+import { Input } from "@/components/ui/input";
+import { handleGenericError } from "@/lib/error-handling";
 
 interface AuthFormProps {
   type: "login" | "register";
@@ -36,12 +44,110 @@ export function AuthForm({ type }: AuthFormProps) {
   const router = useRouter();
   const [userType, setUserType] = useState("teacher");
   const [isLoading, setIsLoading] = useState(false);
+  const [authMethod, setAuthMethod] = useState<"google" | "email">("google");
+  const [formData, setFormData] = useState({
+    email: "",
+    password: "",
+    confirmPassword: "",
+    displayName: "",
+  });
 
   const title = type === "login" ? "Sign In" : "Sign Up";
   const description =
     type === "login"
       ? `Sign in with Google to access your ${userType} account.`
       : `Sign up with Google to create your ${userType} account.`;
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData(prev => ({
+      ...prev,
+      [e.target.name]: e.target.value
+    }));
+  };
+
+  const validateForm = () => {
+    if (authMethod === "email") {
+      if (!formData.email || !formData.password) {
+        toast({
+          variant: "destructive",
+          title: "Validation Error",
+          description: "Email and password are required.",
+        });
+        return false;
+      }
+
+      if (type === "register") {
+        if (!formData.displayName) {
+          toast({
+            variant: "destructive",
+            title: "Validation Error",
+            description: "Display name is required for registration.",
+          });
+          return false;
+        }
+
+        if (formData.password !== formData.confirmPassword) {
+          toast({
+            variant: "destructive",
+            title: "Validation Error",
+            description: "Passwords do not match.",
+          });
+          return false;
+        }
+
+        if (formData.password.length < 6) {
+          toast({
+            variant: "destructive",
+            title: "Validation Error",
+            description: "Password must be at least 6 characters long.",
+          });
+          return false;
+        }
+      }
+    }
+    return true;
+  };
+
+  const handleEmailAuth = async () => {
+    if (!validateForm()) return;
+
+    setIsLoading(true);
+    try {
+      if (type === "register") {
+        const userCredential = await createUserWithEmailAndPassword(
+          auth,
+          formData.email,
+          formData.password
+        );
+
+        await updateProfile(userCredential.user, {
+          displayName: formData.displayName,
+        });
+
+        toast({
+          title: "Account Created",
+          description: "Your account has been created successfully!",
+        });
+      } else {
+        await signInWithEmailAndPassword(auth, formData.email, formData.password);
+        toast({
+          title: "Sign In Successful",
+          description: "Welcome back!",
+        });
+      }
+
+      router.push('/dashboard');
+    } catch (error) {
+      const appError = handleGenericError(error);
+      toast({
+        variant: "destructive",
+        title: "Authentication Failed",
+        description: appError.message,
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
@@ -54,11 +160,11 @@ export function AuthForm({ type }: AuthFormProps) {
       });
       router.push('/dashboard');
     } catch (error) {
-      console.error("Google Sign-In Error:", error);
+      const appError = handleGenericError(error);
       toast({
         variant: "destructive",
         title: "Authentication Failed",
-        description: "Could not sign in with Google. Please try again.",
+        description: appError.message,
       });
     } finally {
       setIsLoading(false);
@@ -83,10 +189,83 @@ export function AuthForm({ type }: AuthFormProps) {
               <CardTitle>{title} as a Teacher</CardTitle>
               <CardDescription>{description}</CardDescription>
             </CardHeader>
-            <CardContent>
-               <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={isLoading}>
-                {isLoading ? "Redirecting..." : <><GoogleIcon /> Sign in with Google</>}
-               </Button>
+            <CardContent className="space-y-4">
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant={authMethod === "google" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setAuthMethod("google")}
+                  className="flex-1"
+                >
+                  Google
+                </Button>
+                <Button
+                  type="button"
+                  variant={authMethod === "email" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setAuthMethod("email")}
+                  className="flex-1"
+                >
+                  Email
+                </Button>
+              </div>
+
+              {authMethod === "google" ? (
+                <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={isLoading}>
+                  {isLoading ? "Redirecting..." : <><GoogleIcon /> Sign in with Google</>}
+                </Button>
+              ) : (
+                <div className="space-y-3">
+                  {type === "register" && (
+                    <div>
+                      <Input
+                        name="displayName"
+                        type="text"
+                        placeholder="Full Name"
+                        value={formData.displayName}
+                        onChange={handleInputChange}
+                        disabled={isLoading}
+                      />
+                    </div>
+                  )}
+                  <div>
+                    <Input
+                      name="email"
+                      type="email"
+                      placeholder="Email"
+                      value={formData.email}
+                      onChange={handleInputChange}
+                      disabled={isLoading}
+                    />
+                  </div>
+                  <div>
+                    <Input
+                      name="password"
+                      type="password"
+                      placeholder="Password"
+                      value={formData.password}
+                      onChange={handleInputChange}
+                      disabled={isLoading}
+                    />
+                  </div>
+                  {type === "register" && (
+                    <div>
+                      <Input
+                        name="confirmPassword"
+                        type="password"
+                        placeholder="Confirm Password"
+                        value={formData.confirmPassword}
+                        onChange={handleInputChange}
+                        disabled={isLoading}
+                      />
+                    </div>
+                  )}
+                  <Button className="w-full" onClick={handleEmailAuth} disabled={isLoading}>
+                    {isLoading ? "Processing..." : type === "register" ? "Create Account" : "Sign In"}
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -96,10 +275,83 @@ export function AuthForm({ type }: AuthFormProps) {
               <CardTitle>{title} as a Student</CardTitle>
               <CardDescription>{description}</CardDescription>
             </CardHeader>
-            <CardContent>
-              <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={isLoading}>
-                {isLoading ? "Redirecting..." : <><GoogleIcon /> Sign in with Google</>}
-              </Button>
+            <CardContent className="space-y-4">
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant={authMethod === "google" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setAuthMethod("google")}
+                  className="flex-1"
+                >
+                  Google
+                </Button>
+                <Button
+                  type="button"
+                  variant={authMethod === "email" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setAuthMethod("email")}
+                  className="flex-1"
+                >
+                  Email
+                </Button>
+              </div>
+
+              {authMethod === "google" ? (
+                <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={isLoading}>
+                  {isLoading ? "Redirecting..." : <><GoogleIcon /> Sign in with Google</>}
+                </Button>
+              ) : (
+                <div className="space-y-3">
+                  {type === "register" && (
+                    <div>
+                      <Input
+                        name="displayName"
+                        type="text"
+                        placeholder="Full Name"
+                        value={formData.displayName}
+                        onChange={handleInputChange}
+                        disabled={isLoading}
+                      />
+                    </div>
+                  )}
+                  <div>
+                    <Input
+                      name="email"
+                      type="email"
+                      placeholder="Email"
+                      value={formData.email}
+                      onChange={handleInputChange}
+                      disabled={isLoading}
+                    />
+                  </div>
+                  <div>
+                    <Input
+                      name="password"
+                      type="password"
+                      placeholder="Password"
+                      value={formData.password}
+                      onChange={handleInputChange}
+                      disabled={isLoading}
+                    />
+                  </div>
+                  {type === "register" && (
+                    <div>
+                      <Input
+                        name="confirmPassword"
+                        type="password"
+                        placeholder="Confirm Password"
+                        value={formData.confirmPassword}
+                        onChange={handleInputChange}
+                        disabled={isLoading}
+                      />
+                    </div>
+                  )}
+                  <Button className="w-full" onClick={handleEmailAuth} disabled={isLoading}>
+                    {isLoading ? "Processing..." : type === "register" ? "Create Account" : "Sign In"}
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

@@ -1,25 +1,99 @@
 import { db } from "@/lib/firebase";
-import { collection, addDoc, getDocs, doc, getDoc, serverTimestamp, query, where } from "firebase/firestore";
-import type { Quiz } from "@/lib/types";
-
-// Note: We're using a simplified model here. In a real app, you'd add more robust error handling and user authentication checks.
+import {
+  collection,
+  addDoc,
+  getDocs,
+  doc,
+  getDoc,
+  updateDoc,
+  deleteDoc,
+  serverTimestamp,
+  query,
+  where,
+  orderBy,
+  limit,
+  Timestamp
+} from "firebase/firestore";
+import type { Quiz, QuizSubmission } from "@/lib/types";
+import { handleGenericError, logError, safeAsync } from "@/lib/error-handling";
 
 /**
  * Saves a quiz to Firestore.
  * @param quizData - The quiz data to save.
  * @param userId - The ID of the user creating the quiz.
  */
-export async function saveQuiz(quizData: Omit<Quiz, "id" | "authorId" | "createdAt">, userId: string): Promise<string> {
-  try {
+export async function saveQuiz(
+  quizData: Omit<Quiz, "id" | "authorId" | "createdAt">,
+  userId: string
+): Promise<string> {
+  if (!userId) {
+    throw new Error("User ID is required to save a quiz");
+  }
+
+  const { data, error } = await safeAsync(async () => {
     const docRef = await addDoc(collection(db, "quizzes"), {
       ...quizData,
       authorId: userId,
       createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+      isPublished: false,
+      submissionCount: 0,
     });
     return docRef.id;
-  } catch (error) {
-    console.error("Error saving quiz to Firestore:", error);
-    throw new Error("Failed to save quiz.");
+  }, "saveQuiz");
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data!;
+}
+
+/**
+ * Updates an existing quiz.
+ * @param quizId - The ID of the quiz to update.
+ * @param quizData - The updated quiz data.
+ * @param userId - The ID of the user updating the quiz.
+ */
+export async function updateQuiz(
+  quizId: string,
+  quizData: Partial<Omit<Quiz, "id" | "authorId" | "createdAt">>,
+  userId: string
+): Promise<void> {
+  if (!userId || !quizId) {
+    throw new Error("User ID and Quiz ID are required to update a quiz");
+  }
+
+  const { error } = await safeAsync(async () => {
+    const quizRef = doc(db, "quizzes", quizId);
+    await updateDoc(quizRef, {
+      ...quizData,
+      updatedAt: serverTimestamp(),
+    });
+  }, "updateQuiz");
+
+  if (error) {
+    throw new Error(error.message);
+  }
+}
+
+/**
+ * Deletes a quiz.
+ * @param quizId - The ID of the quiz to delete.
+ * @param userId - The ID of the user deleting the quiz.
+ */
+export async function deleteQuiz(quizId: string, userId: string): Promise<void> {
+  if (!userId || !quizId) {
+    throw new Error("User ID and Quiz ID are required to delete a quiz");
+  }
+
+  const { error } = await safeAsync(async () => {
+    const quizRef = doc(db, "quizzes", quizId);
+    await deleteDoc(quizRef);
+  }, "deleteQuiz");
+
+  if (error) {
+    throw new Error(error.message);
   }
 }
 
@@ -28,38 +102,202 @@ export async function saveQuiz(quizData: Omit<Quiz, "id" | "authorId" | "created
  * @param userId - The ID of the user whose quizzes to fetch.
  */
 export async function getUserQuizzes(userId: string): Promise<Quiz[]> {
-  try {
-    const q = query(collection(db, "quizzes"), where("authorId", "==", userId));
+  if (!userId) {
+    throw new Error("User ID is required to fetch quizzes");
+  }
+
+  const { data, error } = await safeAsync(async () => {
+    const q = query(
+      collection(db, "quizzes"),
+      where("authorId", "==", userId),
+      orderBy("createdAt", "desc")
+    );
     const querySnapshot = await getDocs(q);
-    const quizzes: Quiz[] = [];
-    querySnapshot.forEach((doc) => {
-      quizzes.push({ id: doc.id, ...doc.data() } as Quiz);
+    return querySnapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+      createdAt: doc.data().createdAt?.toDate?.() || new Date(),
+      updatedAt: doc.data().updatedAt?.toDate?.() || new Date(),
+    })) as Quiz[];
+  }, "getUserQuizzes");
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data || [];
+}
+
+/**
+ * Fetches a single quiz by ID.
+ * @param quizId - The ID of the quiz to fetch.
+ */
+export async function getQuiz(quizId: string): Promise<Quiz | null> {
+  if (!quizId) {
+    throw new Error("Quiz ID is required");
+  }
+
+  const { data, error } = await safeAsync(async () => {
+    const quizRef = doc(db, "quizzes", quizId);
+    const quizSnap = await getDoc(quizRef);
+
+    if (!quizSnap.exists()) {
+      return null;
+    }
+
+    return {
+      id: quizSnap.id,
+      ...quizSnap.data(),
+      createdAt: quizSnap.data().createdAt?.toDate?.() || new Date(),
+      updatedAt: quizSnap.data().updatedAt?.toDate?.() || new Date(),
+    } as Quiz;
+  }, "getQuiz");
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data || null;
+}
+
+/**
+ * Submits a quiz response.
+ * @param submission - The quiz submission data.
+ */
+export async function submitQuiz(submission: Omit<QuizSubmission, "id" | "submittedAt">): Promise<string> {
+  if (!submission.userId || !submission.quizId) {
+    throw new Error("User ID and Quiz ID are required for submission");
+  }
+
+  const { data, error } = await safeAsync(async () => {
+    const docRef = await addDoc(collection(db, "submissions"), {
+      ...submission,
+      submittedAt: serverTimestamp(),
     });
-    return quizzes;
-  } catch (error) {
-    console.error("Error fetching user quizzes:", error);
-    throw new Error("Failed to fetch quizzes.");
+    return docRef.id;
+  }, "submitQuiz");
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data!;
+}
+
+/**
+ * Fetches submissions for a specific quiz.
+ * @param quizId - The ID of the quiz.
+ * @param userId - The ID of the quiz author (for authorization).
+ */
+export async function getQuizSubmissions(quizId: string, userId: string): Promise<QuizSubmission[]> {
+  if (!quizId || !userId) {
+    throw new Error("Quiz ID and User ID are required");
+  }
+
+  const { data, error } = await safeAsync(async () => {
+    const q = query(
+      collection(db, "submissions"),
+      where("quizId", "==", quizId),
+      orderBy("submittedAt", "desc")
+    );
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+      submittedAt: doc.data().submittedAt?.toDate?.() || new Date(),
+    })) as QuizSubmission[];
+  }, "getQuizSubmissions");
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data || [];
+}
+
+/**
+ * Fetches submissions by a specific user.
+ * @param userId - The ID of the user.
+ */
+export async function getUserSubmissions(userId: string): Promise<QuizSubmission[]> {
+  if (!userId) {
+    throw new Error("User ID is required");
+  }
+
+  const { data, error } = await safeAsync(async () => {
+    const q = query(
+      collection(db, "submissions"),
+      where("userId", "==", userId),
+      orderBy("submittedAt", "desc")
+    );
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+      submittedAt: doc.data().submittedAt?.toDate?.() || new Date(),
+    })) as QuizSubmission[];
+  }, "getUserSubmissions");
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data || [];
+}
+
+/**
+ * Publishes or unpublishes a quiz.
+ * @param quizId - The ID of the quiz.
+ * @param isPublished - Whether to publish or unpublish the quiz.
+ * @param userId - The ID of the user (for authorization).
+ */
+export async function toggleQuizPublication(
+  quizId: string,
+  isPublished: boolean,
+  userId: string
+): Promise<void> {
+  if (!quizId || !userId) {
+    throw new Error("Quiz ID and User ID are required");
+  }
+
+  const { error } = await safeAsync(async () => {
+    const quizRef = doc(db, "quizzes", quizId);
+    await updateDoc(quizRef, {
+      isPublished,
+      updatedAt: serverTimestamp(),
+    });
+  }, "toggleQuizPublication");
+
+  if (error) {
+    throw new Error(error.message);
   }
 }
 
 /**
- * Fetches a single quiz by its ID.
- * @param quizId - The ID of the quiz to fetch.
+ * Sets a quiz to be public or private.
+ * @param quizId - The ID of the quiz.
+ * @param isPublic - Whether to make the quiz public or private.
+ * @param userId - The ID of the user (for authorization).
  */
-export async function getQuiz(quizId: string): Promise<Quiz | null> {
-  try {
-    const docRef = doc(db, "quizzes", quizId);
-    const docSnap = await getDoc(docRef);
+export async function toggleQuizPublic(
+  quizId: string,
+  isPublic: boolean,
+  userId: string
+): Promise<void> {
+  if (!quizId || !userId) {
+    throw new Error("Quiz ID and User ID are required");
+  }
 
-    if (docSnap.exists()) {
-      return { id: docSnap.id, ...docSnap.data() } as Quiz;
-    } else {
-      console.log("No such document!");
-      return null;
-    }
-  } catch (error) {
-    console.error("Error fetching quiz:", error);
-    throw new Error("Failed to fetch quiz.");
+  const { error } = await safeAsync(async () => {
+    const quizRef = doc(db, "quizzes", quizId);
+    await updateDoc(quizRef, {
+      isPublic,
+      updatedAt: serverTimestamp(),
+    });
+  }, "toggleQuizPublic");
+
+  if (error) {
+    throw new Error(error.message);
   }
 }
 
@@ -78,4 +316,34 @@ export async function saveSubmission(submissionData: { quizId: string; answers: 
         console.error("Error saving submission:", error);
         throw new Error("Failed to save submission.");
     }
+}
+
+/**
+ * Fetches all results for a specific quiz.
+ * @param quizId - The ID of the quiz to fetch results for.
+ */
+export async function getQuizResults(quizId: string): Promise<QuizSubmission[]> {
+  if (!quizId) {
+    throw new Error("Quiz ID is required to fetch results");
+  }
+
+  const { data, error } = await safeAsync(async () => {
+    const q = query(
+      collection(db, "submissions"),
+      where("quizId", "==", quizId),
+      orderBy("submittedAt", "desc")
+    );
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+      submittedAt: doc.data().submittedAt?.toDate?.() || new Date(),
+    })) as QuizSubmission[];
+  }, "getQuizResults");
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data || [];
 }

@@ -9,7 +9,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { ArrowLeft, ArrowRight, CheckCircle, Clock, Loader2 } from "lucide-react";
-import { getQuiz, saveSubmission } from "@/lib/firestore";
+import { getQuiz, submitQuiz } from "@/lib/firestore";
+import { handleGenericError } from "@/lib/error-handling";
+import { useToast } from "@/hooks/use-toast";
+import { useRouter } from "next/navigation";
 import { useAuthState } from "react-firebase-hooks/auth";
 import { auth } from "@/lib/firebase";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -18,36 +21,59 @@ import { Input } from "../ui/input";
 
 export function StudentQuizView({ quizId }: { quizId: string }) {
   const [user] = useAuthState(auth);
+  const { toast } = useToast();
+  const router = useRouter();
   const [quiz, setQuiz] = useState<Quiz | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string[]>>({});
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [isFinished, setIsFinished] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [startTime] = useState(new Date());
 
   useEffect(() => {
     async function fetchQuiz() {
       try {
         const quizData = await getQuiz(quizId);
         if (quizData) {
+          if (!quizData.isPublished) {
+            setError("This quiz is not currently available.");
+            toast({
+              variant: "destructive",
+              title: "Quiz Not Available",
+              description: "This quiz is not currently published.",
+            });
+            return;
+          }
           setQuiz(quizData);
           if (quizData.timeLimit) {
             setTimeLeft(quizData.timeLimit * 60);
           }
         } else {
           setError("Quiz not found.");
+          toast({
+            variant: "destructive",
+            title: "Quiz Not Found",
+            description: "The quiz you're looking for doesn't exist.",
+          });
         }
       } catch (e) {
-        setError("Failed to load the quiz. Please try again later.");
-        console.error(e);
+        const appError = handleGenericError(e);
+        setError(appError.message);
+        toast({
+          variant: "destructive",
+          title: "Error Loading Quiz",
+          description: appError.message,
+        });
       } finally {
         setIsLoading(false);
       }
     }
     fetchQuiz();
-  }, [quizId]);
+  }, [quizId, toast]);
 
   useEffect(() => {
     if (timeLeft === null || timeLeft <= 0 || isFinished) {
@@ -111,17 +137,58 @@ export function StudentQuizView({ quizId }: { quizId: string }) {
   };
 
   const handleSubmit = async () => {
-    if (isFinished) return;
-    setIsFinished(true);
+    if (isFinished || !quiz || !user) return;
+    
+    setIsSubmitting(true);
     try {
-        await saveSubmission({
-            quizId: quiz.id,
-            answers: answers,
-            studentId: user?.uid
-        });
-    } catch (e) {
-        // Handle submission error, maybe show a toast
-        console.error("Failed to submit quiz", e)
+      // Calculate score
+      let score = 0;
+      let totalPoints = 0;
+      
+      for (const question of quiz.questions) {
+        totalPoints += question.points;
+        const userAnswers = answers[question.id] || [];
+        
+        // Check if answers are correct
+        if (question.type === 'multiple-choice' || question.type === 'true-false') {
+          const correctAnswers = question.correctAnswer;
+          const isCorrect = userAnswers.length === correctAnswers.length && 
+            userAnswers.every(answer => correctAnswers.includes(answer));
+          if (isCorrect) {
+            score += question.points;
+          }
+        }
+      }
+      
+      const timeSpent = Math.floor((new Date().getTime() - startTime.getTime()) / 1000);
+      const finalScore = totalPoints > 0 ? (score / totalPoints) * 100 : 0;
+      
+      await submitQuiz({
+        quizId: quiz.id,
+        userId: user.uid,
+        userEmail: user.email || '',
+        userName: user.displayName || user.email || 'Anonymous',
+        answers: answers,
+        score: finalScore,
+        totalPoints: totalPoints,
+        timeSpent: timeSpent,
+        isCompleted: true,
+      });
+      
+      toast({
+        title: "Quiz Submitted Successfully",
+        description: `Your score: ${finalScore.toFixed(1)}%`,
+      });
+      
+      setIsFinished(true);
+    } catch (error) {
+      const appError = handleGenericError(error);
+      toast({
+        variant: "destructive",
+        title: "Submission Failed",
+        description: appError.message,
+      });
+      setIsSubmitting(false);
     }
   };
   
@@ -177,7 +244,7 @@ export function StudentQuizView({ quizId }: { quizId: string }) {
             {currentQuestion.type === "multiple-choice" && (
                 <div className="space-y-3">
                     {currentQuestion.options.map(option => (
-                        <div key={option.id} className="flex items-center space-x-3 p-3 border rounded-md has-[:checked]:bg-primary/10 has-[:checked]:border-primary transition-all">
+                        <div key={option.id} className="flex flex-wrap items-center space-x-3 p-3 border rounded-md has-[:checked]:bg-primary/10 has-[:checked]:border-primary transition-all">
                             <Checkbox id={`${currentQuestion.id}-${option.id}`}
                                 onCheckedChange={(checked) => {
                                     const currentAnswers = answers[currentQuestion.id] || [];
@@ -195,7 +262,7 @@ export function StudentQuizView({ quizId }: { quizId: string }) {
                 <RadioGroup onValueChange={(value) => handleAnswerChange(currentQuestion.id, value)} value={(answers[currentQuestion.id] || [])[0]}>
                     <div className="space-y-3">
                     {currentQuestion.options.map(option => (
-                        <div key={option.id} className="flex items-center space-x-3 p-3 border rounded-md has-[:checked]:bg-primary/10 has-[:checked]:border-primary transition-all">
+                        <div key={option.id} className="flex flex-wrap items-center space-x-3 p-3 border rounded-md has-[:checked]:bg-primary/10 has-[:checked]:border-primary transition-all">
                             <RadioGroupItem value={option.id} id={`${currentQuestion.id}-${option.id}`} />
                             <Label htmlFor={`${currentQuestion.id}-${option.id}`} className="text-base cursor-pointer flex-1">{option.text}</Label>
                         </div>
@@ -222,8 +289,15 @@ export function StudentQuizView({ quizId }: { quizId: string }) {
                     Next <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
             ) : (
-                <Button onClick={handleSubmit} className="bg-green-600 hover:bg-green-700">
-                    Submit Quiz
+                <Button onClick={handleSubmit} className="bg-green-600 hover:bg-green-700" disabled={isSubmitting}>
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Submitting...
+                      </>
+                    ) : (
+                      'Submit Quiz'
+                    )}
                 </Button>
             )}
           </CardFooter>

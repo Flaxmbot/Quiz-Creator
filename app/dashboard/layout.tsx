@@ -1,3 +1,5 @@
+"use client";
+
 import {
   SidebarProvider,
   Sidebar,
@@ -9,48 +11,59 @@ import {
   SidebarInset,
   SidebarTrigger,
 } from "@/components/ui/sidebar"
-import { CheckCircle, Home, BarChart2, Settings, PlusCircle } from "lucide-react"
+import { CheckCircle, Home, User, Settings, PlusCircle } from "lucide-react"
 import Link from "next/link"
-import { Button } from "@/components/ui/button"
+import { AuthGuard } from "@/components/auth/auth-guard";
 
-export default function DashboardLayout({
+function DashboardLayoutContent({
   children,
 }: {
   children: React.ReactNode
 }) {
+
   return (
     <SidebarProvider>
-      <Sidebar>
-        <SidebarContent>
-          <SidebarHeader>
-            <div className="flex items-center gap-2">
-              <CheckCircle className="w-8 h-8 text-primary" />
-              <span className="text-xl font-bold">QuizLink</span>
+      <Sidebar className="futuristic-card border-r border-border/20 backdrop-blur-xl">
+        <SidebarContent className="custom-scrollbar">
+          <SidebarHeader className="p-6">
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <CheckCircle className="w-10 h-10 text-primary" />
+                <div className="absolute inset-0 rounded-full bg-primary/20 blur-md -z-10"></div>
+              </div>
+              <span className="text-2xl font-bold tracking-tight">QuizLink</span>
             </div>
           </SidebarHeader>
-          <SidebarMenu>
+          <SidebarMenu className="space-y-2 px-3">
             <SidebarMenuItem>
-              <SidebarMenuButton asChild>
-                <Link href="/dashboard">
-                  <Home />
-                  My Quizzes
+              <SidebarMenuButton asChild className="group hover:bg-primary/10 hover:text-primary transition-all duration-300 rounded-xl">
+                <Link href="/dashboard" className="flex items-center gap-3 p-3">
+                  <Home className="w-5 h-5 group-hover:animate-pulse" />
+                  <span className="font-medium">My Quizzes</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
-            {/* Results link can be a future implementation at a global level */}
-            {/* <SidebarMenuItem>
-              <SidebarMenuButton asChild>
-                <Link href="/results"> 
-                  <BarChart2 />
-                  Results
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild className="group hover:bg-primary/10 hover:text-primary transition-all duration-300 rounded-xl">
+                <Link href="/create" className="flex items-center gap-3 p-3">
+                  <PlusCircle className="w-5 h-5 group-hover:animate-pulse" />
+                  <span className="font-medium">Create Quiz</span>
                 </Link>
               </SidebarMenuButton>
-            </SidebarMenuItem> */}
+            </SidebarMenuItem>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild>
-                <Link href="#">
-                  <Settings />
-                  Settings
+              <SidebarMenuButton asChild className="group hover:bg-primary/10 hover:text-primary transition-all duration-300 rounded-xl">
+                <Link href="/dashboard/profile" className="flex items-center gap-3 p-3">
+                  <User className="w-5 h-5 group-hover:animate-pulse" />
+                  <span className="font-medium">Profile</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild className="group hover:bg-primary/10 hover:text-primary transition-all duration-300 rounded-xl">
+                <Link href="/dashboard/settings" className="flex items-center gap-3 p-3">
+                  <Settings className="w-5 h-5 group-hover:animate-pulse" />
+                  <span className="font-medium">Settings</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -58,20 +71,26 @@ export default function DashboardLayout({
         </SidebarContent>
       </Sidebar>
       <SidebarInset>
-        <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6 py-2">
-          <SidebarTrigger className="sm:hidden" />
+        <div className="flex h-16 items-center gap-4 border-b border-border/20 bg-background/80 backdrop-blur-xl px-6 py-3 shadow-sm">
+          <SidebarTrigger className="sm:hidden hover:bg-primary/10 transition-colors duration-200 rounded-lg p-2" />
           <div className="flex-1">
             {/* The title can be dynamic based on the page */}
           </div>
-          <Button asChild>
-            <Link href="/create">
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Create New Quiz
-            </Link>
-          </Button>
-        </header>
-        <main className="flex-1 p-4 sm:px-6 sm:py-0">{children}</main>
+        </div>
+        <main className="flex-1 p-6 custom-scrollbar">{children}</main>
       </SidebarInset>
     </SidebarProvider>
-  )
+  );
+}
+
+export default function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  return (
+    <AuthGuard>
+      <DashboardLayoutContent>{children}</DashboardLayoutContent>
+    </AuthGuard>
+  );
 }

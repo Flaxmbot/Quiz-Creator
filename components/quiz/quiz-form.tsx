@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import type { Quiz, Question, QuestionType } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,9 +18,11 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useAuthState } from "react-firebase-hooks/auth";
 import { auth } from "@/lib/firebase";
-import { saveQuiz } from "@/lib/firestore";
-import { useRouter } from "next/navigation";
+import { saveQuiz, getQuiz, updateQuiz } from "@/lib/firestore";
+import { useRouter, useSearchParams } from "next/navigation";
 import type { GenerateQuizOutput } from "@/ai/flows/generate-quiz";
+import { QuizSettings } from "./quiz-settings";
+import { handleGenericError } from "@/lib/error-handling";
 
 const initialQuestionState: Question = {
   id: "",
@@ -38,14 +40,68 @@ export function QuizForm() {
   const { toast } = useToast();
   const [user, loading] = useAuthState(auth);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const editQuizId = searchParams.get('edit');
   const [isSaving, setIsSaving] = useState(false);
   const [isAIGeneratorOpen, setIsAIGeneratorOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(!!editQuizId);
 
   const [quiz, setQuiz] = useState<Omit<Quiz, "id" | "authorId" | "createdAt">>({
     title: "",
     description: "",
     questions: [],
+    isPublished: false,
+    allowRetakes: true,
+    showCorrectAnswers: true,
+    randomizeQuestions: false,
   });
+
+  // Load existing quiz data for editing
+  useEffect(() => {
+    async function loadQuiz() {
+      if (editQuizId && user) {
+        setIsLoading(true);
+        try {
+          const existingQuiz = await getQuiz(editQuizId);
+          if (existingQuiz && existingQuiz.authorId === user.uid) {
+            setQuiz({
+              title: existingQuiz.title,
+              description: existingQuiz.description,
+              questions: existingQuiz.questions,
+              timeLimit: existingQuiz.timeLimit,
+              isPublished: existingQuiz.isPublished || false,
+              allowRetakes: existingQuiz.allowRetakes || true,
+              showCorrectAnswers: existingQuiz.showCorrectAnswers || true,
+              randomizeQuestions: existingQuiz.randomizeQuestions || false,
+              category: existingQuiz.category,
+              tags: existingQuiz.tags,
+            });
+          } else {
+            toast({
+              variant: "destructive",
+              title: "Quiz Not Found",
+              description: "The quiz you're trying to edit was not found or you don't have permission to edit it.",
+            });
+            router.push('/dashboard');
+          }
+        } catch (error) {
+          const appError = handleGenericError(error);
+          toast({
+            variant: "destructive",
+            title: "Error Loading Quiz",
+            description: appError.message,
+          });
+          router.push('/dashboard');
+        } finally {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    if (!loading) {
+      loadQuiz();
+    }
+  }, [editQuizId, user, loading, router, toast]);
 
   const handleQuizDetailChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -130,22 +186,47 @@ export function QuizForm() {
 
     setIsSaving(true);
     try {
+      if (editQuizId) {
+        // Update existing quiz
+        await updateQuiz(editQuizId, quiz, user.uid);
+        toast({
+          title: "Quiz Updated!",
+          description: "Your quiz has been successfully updated.",
+        });
+      } else {
+        // Create new quiz
         await saveQuiz(quiz, user.uid);
         toast({
-            title: "Quiz Saved!",
-            description: "Your new quiz has been successfully saved.",
+          title: "Quiz Saved!",
+          description: "Your new quiz has been successfully saved.",
         });
-        router.push("/dashboard");
+      }
+      router.push("/dashboard");
     } catch (error) {
-        toast({
-            variant: "destructive",
-            title: "Save Error",
-            description: "Could not save the quiz. Please try again.",
-        });
+      const appError = handleGenericError(error);
+      toast({
+        variant: "destructive",
+        title: editQuizId ? "Update Error" : "Save Error",
+        description: appError.message,
+      });
     } finally {
-        setIsSaving(false);
+      setIsSaving(false);
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-8">
+        <div className="p-6 border rounded-lg bg-card">
+          <div className="space-y-4">
+            <div className="h-6 bg-muted rounded animate-pulse" />
+            <div className="h-4 bg-muted rounded animate-pulse w-3/4" />
+            <div className="h-10 bg-muted rounded animate-pulse" />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -181,6 +262,11 @@ export function QuizForm() {
           </div>
         </div>
       </div>
+
+      <QuizSettings
+        quiz={quiz}
+        onQuizChange={(updates) => setQuiz(prev => ({ ...prev, ...updates }))}
+      />
 
       <div id="questions-section" className="space-y-4">
         {quiz.questions.map((question, index) => (
@@ -231,7 +317,15 @@ export function QuizForm() {
         </div>
 
         <Button onClick={handleSave} disabled={isSaving || loading}>
-          {isSaving ? "Saving..." : <><Save className="mr-2 h-4 w-4" /> Save Quiz</>}
+          {isSaving
+            ? (editQuizId ? "Updating..." : "Saving...")
+            : (
+              <>
+                <Save className="mr-2 h-4 w-4" />
+                {editQuizId ? "Update Quiz" : "Save Quiz"}
+              </>
+            )
+          }
         </Button>
       </div>
     </div>

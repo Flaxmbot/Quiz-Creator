@@ -24,7 +24,30 @@ export interface Quiz {
   timeLimit?: number;
   password?: string;
   authorId: string;
-  createdAt: Timestamp;
+  createdAt: Date | Timestamp;
+  updatedAt?: Date | Timestamp;
+  isPublished?: boolean;
+  isPublic?: boolean;
+  submissionCount?: number;
+  allowRetakes?: boolean;
+  showCorrectAnswers?: boolean;
+  randomizeQuestions?: boolean;
+  category?: string;
+  tags?: string[];
+}
+
+export interface QuizSubmission {
+  id: string;
+  quizId: string;
+  userId: string;
+  userEmail?: string;
+  userName?: string;
+  answers: Record<string, string[]>; // questionId -> array of selected optionIds or text answer
+  submittedAt: Date | Timestamp;
+  score?: number;
+  totalPoints?: number;
+  timeSpent?: number; // in seconds
+  isCompleted: boolean;
 }
 
 export interface Submission {
@@ -34,4 +57,32 @@ export interface Submission {
     answers: Record<string, string[]>; // questionId -> array of selected optionIds or text answer
     submittedAt: Timestamp;
     score?: number;
+}
+
+export interface User {
+  id: string;
+  email: string;
+  displayName?: string;
+  photoURL?: string;
+  role: 'teacher' | 'student';
+  createdAt: Date | Timestamp;
+  lastLoginAt?: Date | Timestamp;
+}
+
+export interface QuizAnalytics {
+  quizId: string;
+  totalSubmissions: number;
+  averageScore: number;
+  completionRate: number;
+  averageTimeSpent: number;
+  questionAnalytics: QuestionAnalytics[];
+}
+
+export interface QuestionAnalytics {
+  questionId: string;
+  correctAnswers: number;
+  incorrectAnswers: number;
+  skippedAnswers: number;
+  averageTimeSpent: number;
+  difficultyLevel: 'easy' | 'medium' | 'hard';
 }

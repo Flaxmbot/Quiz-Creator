@@ -1,15 +1,15 @@
 'use server';
 
 /**
- * @fileOverview This file contains a Genkit flow for generating complete quizzes using AI.
+ * @fileOverview This file contains AI functions for generating complete quizzes using Google AI.
  *
  * - generateQuiz - A function that takes quiz parameters and returns a complete quiz with questions.
  * - GenerateQuizInput - The input type for the generateQuiz function.
  * - GenerateQuizOutput - The return type for the generateQuiz function.
  */
 
-import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+import { z } from 'zod';
 
 const GenerateQuizInputSchema = z.object({
   topic: z
@@ -50,47 +50,66 @@ const GenerateQuizOutputSchema = z.object({
 });
 export type GenerateQuizOutput = z.infer<typeof GenerateQuizOutputSchema>;
 
+const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENAI_API_KEY!);
+
 export async function generateQuiz(input: GenerateQuizInput): Promise<GenerateQuizOutput> {
-  return generateQuizFlow(input);
-}
+  try {
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    
+    const prompt = `You are an AI assistant designed to help teachers create comprehensive quizzes.
 
-const generateQuizPrompt = ai.definePrompt({
-  name: 'generateQuizPrompt',
-  input: {schema: GenerateQuizInputSchema},
-  output: {schema: GenerateQuizOutputSchema},
-  prompt: `You are an AI assistant designed to help teachers create comprehensive quizzes.
+Generate a complete quiz based on the following parameters:
+- Topic: ${input.topic}
+- Question Types: ${input.questionTypes.join(', ')}
+- Number of Questions: ${input.numberOfQuestions}
+- Difficulty Level: ${input.difficultyLevel}
+${input.additionalInstructions ? `- Additional Instructions: ${input.additionalInstructions}` : ''}
 
-  Generate a complete quiz based on the following parameters:
-  - Topic: {{{topic}}}
-  - Question Types: {{{questionTypes}}}
-  - Number of Questions: {{{numberOfQuestions}}}
-  - Difficulty Level: {{{difficultyLevel}}}
-  {{#if additionalInstructions}}
-  - Additional Instructions: {{{additionalInstructions}}}
-  {{/if}}
+Guidelines:
+1. Create a relevant title and description for the quiz
+2. Generate exactly ${input.numberOfQuestions} questions
+3. Distribute question types as evenly as possible based on the requested types
+4. For multiple-choice questions: provide 4 options, use correctAnswer as array of indices (e.g., ["0"] for first option, ["0","2"] for multiple correct)
+5. For true-false questions: provide exactly 2 options ["True", "False"], use correctAnswer as ["0"] for True or ["1"] for False
+6. For short-answer and fill-in-the-blank: leave options empty, use correctAnswer as array with the correct text answer
+7. Assign appropriate points (typically 10 points per question, but can vary based on difficulty)
+8. Ensure questions are appropriate for the specified difficulty level
+9. Make questions clear, engaging, and educational
 
-  Guidelines:
-  1. Create a relevant title and description for the quiz
-  2. Generate exactly {{{numberOfQuestions}}} questions
-  3. Distribute question types as evenly as possible based on the requested types
-  4. For multiple-choice questions: provide 4 options, use correctAnswer as array of indices (e.g., ["0"] for first option, ["0","2"] for multiple correct)
-  5. For true-false questions: provide exactly 2 options ["True", "False"], use correctAnswer as ["0"] for True or ["1"] for False
-  6. For short-answer and fill-in-the-blank: leave options empty, use correctAnswer as array with the correct text answer
-  7. Assign appropriate points (typically 10 points per question, but can vary based on difficulty)
-  8. Ensure questions are appropriate for the specified difficulty level
-  9. Make questions clear, engaging, and educational
+Return ONLY valid JSON in this exact format, no additional text:
+{
+  "title": "Quiz Title",
+  "description": "Quiz Description", 
+  "questions": [
+    {
+      "text": "Question text",
+      "type": "multiple-choice",
+      "options": [
+        {"text": "Option A"},
+        {"text": "Option B"},
+        {"text": "Option C"},
+        {"text": "Option D"}
+      ],
+      "correctAnswer": ["0"],
+      "points": 10
+    }
+  ]
+}`;
 
-  Return the quiz in the specified JSON format.`,
-});
-
-const generateQuizFlow = ai.defineFlow(
-  {
-    name: 'generateQuizFlow',
-    inputSchema: GenerateQuizInputSchema,
-    outputSchema: GenerateQuizOutputSchema,
-  },
-  async input => {
-    const {output} = await generateQuizPrompt(input);
-    return output!;
+    const result = await model.generateContent(prompt);
+    const response = result.response.text();
+    
+    // Clean the response to extract JSON
+    const jsonStart = response.indexOf('{');
+    const jsonEnd = response.lastIndexOf('}') + 1;
+    const jsonString = response.slice(jsonStart, jsonEnd);
+    
+    const parsed = JSON.parse(jsonString);
+    
+    // Validate the response with our schema
+    return GenerateQuizOutputSchema.parse(parsed);
+  } catch (error) {
+    console.error('Error generating quiz:', error);
+    throw new Error('Failed to generate quiz');
   }
-);
+}

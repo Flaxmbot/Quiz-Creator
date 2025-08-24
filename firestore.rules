@@ -1,0 +1,47 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Users can read and write their own user document
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Quiz rules
+    match /quizzes/{quizId} {
+      // Authors can read, update, and delete their own quizzes.
+      // Any authenticated user can read a published quiz.
+      allow read: if request.auth != null && (resource.data.authorId == request.auth.uid || resource.data.isPublished == true);
+      allow update, delete: if request.auth != null && request.auth.uid == resource.data.authorId;
+
+      // Authenticated users can create quizzes for themselves.
+      allow create: if request.auth != null && request.resource.data.authorId == request.auth.uid;
+
+      // Quiz submissions subcollection
+      match /submissions/{submissionId} {
+        // Allow authenticated users to create submissions
+        allow create: if request.auth != null;
+
+        // Allow users to read their own submissions, and authors to read all submissions for their quiz.
+        allow read: if request.auth != null && (request.auth.uid == resource.data.userId || request.auth.uid == get(/databases/$(database)/documents/quizzes/$(quizId)).data.authorId);
+      }
+    }
+
+    // Quiz results/submissions at root level
+    match /submissions/{submissionId} {
+      // Allow authenticated users to create submissions for themselves
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+
+      // Allow users to read their own submissions, and authors to read submissions for their quizzes.
+      allow read: if request.auth != null && (request.auth.uid == resource.data.userId || request.auth.uid == get(/databases/$(database)/documents/quizzes/$(resource.data.quizId)).data.authorId);
+    }
+
+    // Analytics and aggregated data
+    match /analytics/{docId} {
+      // For now, only authenticated users can read analytics.
+      // TODO: Restrict this further based on roles or ownership if needed.
+      allow read: if request.auth != null;
+      // Analytics should be written by server-side functions only
+      allow write: if false;
+    }
+  }
+}
