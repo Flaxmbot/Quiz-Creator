@@ -192,7 +192,7 @@ export function ShowAnswersView({ quizId }: { quizId: string }) {
             <Award className="w-4 h-4 text-green-500" />
             <div>
               <p className="text-xs text-muted-foreground">Total Points</p>
-              <p className="font-semibold">{quiz.questions.reduce((sum, q) => sum + q.points, 0)}</p>
+              <p className="font-semibold">{quiz.questions.reduce((sum, q) => sum + (q.points || 0), 0)}</p>
             </div>
           </div>
           

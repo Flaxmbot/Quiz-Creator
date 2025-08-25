@@ -16,7 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Wand2, Loader2 } from "lucide-react";
-import { generateQuizAction } from "@/app/actions/quiz";
+import { generateQuizAction, generateQuizFromPdfAction } from "@/app/actions/quiz";
 import { useToast } from "@/hooks/use-toast";
 import type { GenerateQuizInput, GenerateQuizOutput } from "@/ai/flows/generate-quiz";
 import type { QuestionType } from "@/lib/types";
@@ -25,19 +25,23 @@ interface AIQuizGeneratorProps {
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
   onQuizGenerated: (quiz: GenerateQuizOutput) => void;
+  pdfContent?: string;
+  pdfTitle?: string;
 }
 
 export function AIQuizGenerator({
   isOpen,
   setIsOpen,
   onQuizGenerated,
+  pdfContent,
+  pdfTitle,
 }: AIQuizGeneratorProps) {
   const { toast } = useToast();
   const [isGenerating, setIsGenerating] = useState(false);
   const [formData, setFormData] = useState<GenerateQuizInput>({
-    topic: "",
+    topic: pdfTitle || "",
     questionTypes: ["multiple-choice"],
-    numberOfQuestions: 5,
+    numberOfQuestions: 20,
     difficultyLevel: "medium",
     additionalInstructions: "",
   });
@@ -76,7 +80,7 @@ export function AIQuizGenerator({
   };
 
   const handleGenerate = async () => {
-    if (!formData.topic.trim()) {
+    if (!pdfContent && !formData.topic.trim()) {
       toast({
         variant: "destructive",
         title: "Validation Error",
@@ -96,7 +100,14 @@ export function AIQuizGenerator({
 
     setIsGenerating(true);
     try {
-      const result = await generateQuizAction(formData);
+      const result = pdfContent
+        ? await generateQuizFromPdfAction({
+            textContent: pdfContent,
+            questionTypes: formData.questionTypes,
+            numberOfQuestions: formData.numberOfQuestions,
+            difficultyLevel: formData.difficultyLevel,
+          })
+        : await generateQuizAction(formData);
       
       if (result.success && result.data) {
         onQuizGenerated(result.data);
@@ -137,26 +148,30 @@ export function AIQuizGenerator({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Wand2 className="text-primary" />
-            Generate Quiz with AI
+            {pdfContent ? "Generate Quiz from PDF" : "Generate Quiz with AI"}
           </DialogTitle>
           <DialogDescription>
-            Let AI create a complete quiz for you. Just provide the topic and preferences.
+            {pdfContent
+              ? "Let AI create a complete quiz based on the content of your PDF document."
+              : "Let AI create a complete quiz for you. Just provide the topic and preferences."}
           </DialogDescription>
         </DialogHeader>
         
         <div className="grid gap-4 sm:gap-6 py-4">
-          <div className="space-y-2">
-            <Label htmlFor="topic" className="text-sm sm:text-base">Topic *</Label>
-            <Input
-              id="topic"
-              name="topic"
-              value={formData.topic}
-              onChange={handleInputChange}
-              placeholder="e.g., World War II, Photosynthesis, JavaScript Basics"
-              disabled={isGenerating}
-              className="text-sm sm:text-base"
-            />
-          </div>
+          {!pdfContent && (
+            <div className="space-y-2">
+              <Label htmlFor="topic" className="text-sm sm:text-base">Topic *</Label>
+              <Input
+                id="topic"
+                name="topic"
+                value={formData.topic}
+                onChange={handleInputChange}
+                placeholder="e.g., World War II, Photosynthesis, JavaScript Basics"
+                disabled={isGenerating}
+                className="text-sm sm:text-base"
+              />
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label className="text-sm sm:text-base">Question Types *</Label>

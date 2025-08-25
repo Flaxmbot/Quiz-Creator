@@ -123,14 +123,6 @@ function DashboardLayoutContent({
       </Sidebar>
       <SidebarInset className={isMobile && sidebarOpen ? 'pointer-events-none' : ''}>
         <div className="flex h-14 sm:h-16 items-center gap-3 sm:gap-4 border-b border-border/20 bg-background/80 backdrop-blur-xl px-4 sm:px-6 py-3 shadow-sm">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="sm:hidden hover:bg-primary/10 transition-colors duration-200 rounded-lg p-2 h-8 w-8"
-          >
-            <Menu className="h-4 w-4" />
-          </Button>
           <div className="flex-1">
             {/* The title can be dynamic based on the page */}
           </div>

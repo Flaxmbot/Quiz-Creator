@@ -233,7 +233,7 @@ export function StudentQuizView({ quizId }: { quizId: string }) {
       let totalPoints = 0;
       
       for (const question of quiz.questions) {
-        totalPoints += question.points;
+        totalPoints += (question.points || 0);
         const userAnswers = answers[question.id] || [];
         
         // Check if answers are correct
@@ -242,7 +242,7 @@ export function StudentQuizView({ quizId }: { quizId: string }) {
           const isCorrect = userAnswers.length === correctAnswers.length && 
             userAnswers.every(answer => correctAnswers.includes(answer));
           if (isCorrect) {
-            score += question.points;
+            score += (question.points || 0);
           }
         }
       }

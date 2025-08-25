@@ -10,8 +10,14 @@ const nextConfig = {
   },
   // Skip ESLint during production builds to avoid failing builds on lint errors.
   // Lint can still be run locally via `npm run lint`.
-  eslint: {
+ eslint: {
     ignoreDuringBuilds: true,
+  },
+  // Increase body size limit for Server Actions to handle larger PDF uploads
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '10mb',
+    },
   },
 }
 

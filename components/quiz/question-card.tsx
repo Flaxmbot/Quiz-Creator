@@ -36,7 +36,10 @@ export function QuestionCard({
   const handleQuestionChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
-    updateQuestion(index, { ...question, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    // Convert points to number if the field is points
+    const newValue = name === 'points' ? parseInt(value, 10) || 0 : value;
+    updateQuestion(index, { ...question, [name]: newValue });
   };
 
   const handleOptionChange = (
