@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { QuizSubmission, Quiz } from "@/lib/types";
 import { Clock, Trophy, Calendar, BookOpen, CheckCircle, XCircle, Star } from "lucide-react";
@@ -24,37 +24,33 @@ export default function QuizHistoryPage() {
   const [isDataLoading, setIsDataLoading] = useState(true);
   const { toast } = useToast();
 
-  const fetchSubmissions = async () => {
-    if (user) {
-      try {
-        setIsDataLoading(true);
-        const userSubmissions = await getUserSubmissions(user.uid);
-        
-        // Fetch quiz details for each submission
-        const submissionsWithQuizzes = await Promise.all(
-          userSubmissions.map(async (submission) => {
-            try {
-              const quiz = await getQuiz(submission.quizId);
-              return { ...submission, quiz: quiz || undefined };
-            } catch (error) {
-              return submission; // Return submission without quiz if fetch fails
-            }
-          })
-        );
-        
-        setSubmissions(submissionsWithQuizzes);
-      } catch (error) {
-        const appError = handleGenericError(error);
-        toast({
-          variant: 'destructive',
-          title: 'Error loading quiz history',
-          description: appError.message,
-        });
-      } finally {
-        setIsDataLoading(false);
-      }
+  const fetchSubmissions = useCallback(async () => {
+    if (!user) return;
+    try {
+      setIsDataLoading(true);
+      const userSubmissions = await getUserSubmissions(user.uid);
+      const submissionsWithQuizzes = await Promise.all(
+        userSubmissions.map(async (submission) => {
+          try {
+            const quiz = await getQuiz(submission.quizId);
+            return { ...submission, quiz: quiz || undefined };
+          } catch (error) {
+            return submission;
+          }
+        })
+      );
+      setSubmissions(submissionsWithQuizzes);
+    } catch (error) {
+      const appError = handleGenericError(error);
+      toast({
+        variant: 'destructive',
+        title: 'Error loading quiz history',
+        description: appError.message,
+      });
+    } finally {
+      setIsDataLoading(false);
     }
-  };
+  }, [user, toast]);
 
   useEffect(() => {
     fetchSubmissions();

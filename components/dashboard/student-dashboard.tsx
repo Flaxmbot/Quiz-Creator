@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import type { Quiz, QuizSubmission } from "@/lib/types";
@@ -30,64 +30,60 @@ export function StudentDashboard({ className }: StudentDashboardProps) {
   const [filterCategory, setFilterCategory] = useState<string>("all");
   const { toast } = useToast();
 
-  const fetchData = async () => {
-    if (user) {
-      setIsDataLoading(true);
-      console.log("StudentDashboard: Fetching data for user:", user.uid);
-      
-      // Fetch each data source independently to handle partial failures
-      const promises = [
-        getAllTeacherQuizzes().catch(error => {
-          console.error("StudentDashboard: Error fetching teacher quizzes:", error);
-          return []; // Return empty array on error
-        }),
-        getUserSubmissions(user.uid).catch(error => {
-          console.error("StudentDashboard: Error fetching user submissions:", error);
-          return []; // Return empty array on error
-        })
-      ];
+  const fetchData = useCallback(async () => {
+    if (!user) return;
 
-      try {
-        const results = await Promise.allSettled(promises);
-        
-        // Extract results with proper typing, defaulting to empty arrays for failed promises
-        const teacherQuizzesResult = results[0].status === 'fulfilled' ? results[0].value as Quiz[] : [];
-        const submissionsResult = results[1].status === 'fulfilled' ? results[1].value as QuizSubmission[] : [];
-        
-        // Debug logging
-        console.log("StudentDashboard: Teacher quizzes fetched:", teacherQuizzesResult.length);
-        console.log("StudentDashboard: Teacher quizzes data:", teacherQuizzesResult);
-        console.log("StudentDashboard: User submissions fetched:", submissionsResult.length);
-        console.log("StudentDashboard: User submissions data:", submissionsResult);
-        
-        setAvailableQuizzes(teacherQuizzesResult);
-        setFeaturedQuizzes([]); // No longer fetching featured quizzes
-        setUserSubmissions(submissionsResult);
+    setIsDataLoading(true);
+    console.log("StudentDashboard: Fetching data for user:", user.uid);
 
-        // Show a warning if some data failed to load
-        const failedPromises = results.filter(p => p.status === 'rejected');
-        if (failedPromises.length > 0) {
-          console.warn(`StudentDashboard: ${failedPromises.length} data sources failed to load`);
-          toast({
-            variant: 'default',
-            title: 'Partial data loading',
-            description: 'Some quiz data may not be available at the moment.',
-          });
-        }
-        
-      } catch (error) {
-        console.error("StudentDashboard: Unexpected error in fetchData:", error);
-        const appError = handleGenericError(error);
+    const promises = [
+      getAllTeacherQuizzes().catch(error => {
+        console.error("StudentDashboard: Error fetching teacher quizzes:", error);
+        return [] as Quiz[];
+      }),
+      getUserSubmissions(user.uid).catch(error => {
+        console.error("StudentDashboard: Error fetching user submissions:", error);
+        return [] as QuizSubmission[];
+      })
+    ];
+
+    try {
+      const results = await Promise.allSettled(promises);
+
+      const teacherQuizzesResult = results[0].status === 'fulfilled' ? results[0].value as Quiz[] : [];
+      const submissionsResult = results[1].status === 'fulfilled' ? results[1].value as QuizSubmission[] : [];
+
+      console.log("StudentDashboard: Teacher quizzes fetched:", teacherQuizzesResult.length);
+      console.log("StudentDashboard: Teacher quizzes data:", teacherQuizzesResult);
+      console.log("StudentDashboard: User submissions fetched:", submissionsResult.length);
+      console.log("StudentDashboard: User submissions data:", submissionsResult);
+
+      setAvailableQuizzes(teacherQuizzesResult);
+      setFeaturedQuizzes([]);
+      setUserSubmissions(submissionsResult);
+
+      const failedPromises = results.filter(p => p.status === 'rejected');
+      if (failedPromises.length > 0) {
+        console.warn(`StudentDashboard: ${failedPromises.length} data sources failed to load`);
         toast({
-          variant: 'destructive',
-          title: 'Error loading data',
-          description: appError.message,
+          variant: 'default',
+          title: 'Partial data loading',
+          description: 'Some quiz data may not be available at the moment.',
         });
-      } finally {
-        setIsDataLoading(false);
       }
+
+    } catch (error) {
+      console.error("StudentDashboard: Unexpected error in fetchData:", error);
+      const appError = handleGenericError(error);
+      toast({
+        variant: 'destructive',
+        title: 'Error loading data',
+        description: appError.message,
+      });
+    } finally {
+      setIsDataLoading(false);
     }
-  };
+  }, [user, toast]);
 
   useEffect(() => {
     console.log("StudentDashboard useEffect triggered");

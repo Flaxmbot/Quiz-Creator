@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -53,34 +53,34 @@ export default function DashboardPage() {
   const [duplicatingQuizId, setDuplicatingQuizId] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const fetchData = async () => {
-    if (user) {
-      setIsDataLoading(true);
-      try {
-        console.log("Fetching data for user:", user.uid);
-        const [profile, userQuizzes] = await Promise.all([
-          getUserProfile(user.uid),
-          getUserQuizzes(user.uid)
-        ]);
-        
-        console.log("User profile fetched:", profile);
-        console.log("User quizzes fetched:", userQuizzes.length);
-        
-        setUserProfile(profile);
-        setQuizzes(userQuizzes);
-      } catch (error) {
-        console.error("Error fetching data:", error);
-        const appError = handleGenericError(error);
-        toast({
-          variant: "destructive",
-          title: "Error Loading Data",
-          description: appError.message,
-        });
-      } finally {
-        setIsDataLoading(false);
-      }
+  const fetchData = useCallback(async () => {
+    if (!user) return;
+
+    setIsDataLoading(true);
+    try {
+      console.log("Fetching data for user:", user.uid);
+      const [profile, userQuizzes] = await Promise.all([
+        getUserProfile(user.uid),
+        getUserQuizzes(user.uid)
+      ]);
+      
+      console.log("User profile fetched:", profile);
+      console.log("User quizzes fetched:", userQuizzes.length);
+      
+      setUserProfile(profile);
+      setQuizzes(userQuizzes);
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      const appError = handleGenericError(error);
+      toast({
+        variant: "destructive",
+        title: "Error Loading Data",
+        description: appError.message,
+      });
+    } finally {
+      setIsDataLoading(false);
     }
-  };
+  }, [user, toast]);
 
   useEffect(() => {
     if (!loading) {

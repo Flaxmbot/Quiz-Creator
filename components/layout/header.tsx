@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { CheckCircle, Menu, X } from "lucide-react";
@@ -21,12 +21,28 @@ import { useToast } from "@/hooks/use-toast";
 import { handleGenericError } from "@/lib/error-handling";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { getUserProfile } from "@/lib/firestore";
+import type { User as AppUser } from "@/lib/types";
 
 export function Header() {
   const [user, loading] = useAuthState(auth);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [appUser, setAppUser] = useState<AppUser | null>(null);
   const router = useRouter();
   const { toast } = useToast();
+
+  useEffect(() => {
+    const loadProfile = async () => {
+      if (!user) { setAppUser(null); return; }
+      try {
+        const profile = await getUserProfile(user.uid);
+        setAppUser(profile);
+      } catch (e) {
+        console.warn('Header: failed to load user profile for role check', e);
+      }
+    };
+    loadProfile();
+  }, [user]);
 
   const handleSignOut = async () => {
     try {
@@ -91,12 +107,14 @@ export function Header() {
               </Link>
             </Button>
             
-            <Button asChild variant="ghost" className="w-full justify-start h-12" onClick={() => setMobileMenuOpen(false)}>
-              <Link href="/create" className="flex items-center gap-3">
-                <Plus className="w-5 h-5" />
-                <span>Create Quiz</span>
-              </Link>
-            </Button>
+            {appUser?.role === 'teacher' && (
+              <Button asChild variant="ghost" className="w-full justify-start h-12" onClick={() => setMobileMenuOpen(false)}>
+                <Link href="/create" className="flex items-center gap-3">
+                  <Plus className="w-5 h-5" />
+                  <span>Create Quiz</span>
+                </Link>
+              </Button>
+            )}
             
             <Button asChild variant="ghost" className="w-full justify-start h-12" onClick={() => setMobileMenuOpen(false)}>
               <Link href="/dashboard/history" className="flex items-center gap-3">
@@ -172,6 +190,11 @@ export function Header() {
                     <Button asChild variant="outline" size="sm" className="hidden sm:inline-flex touch-target min-h-[44px]">
                       <Link href="/dashboard">Dashboard</Link>
                     </Button>
+                    {appUser?.role === 'teacher' && (
+                      <Button asChild variant="default" size="sm" className="hidden sm:inline-flex touch-target min-h-[44px]">
+                        <Link href="/create">Create Quiz</Link>
+                      </Button>
+                    )}
                     
                     {/* Mobile Hamburger Menu */}
                     <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
