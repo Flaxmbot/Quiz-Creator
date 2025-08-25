@@ -181,7 +181,7 @@ export default function QuizHistoryPage() {
             <BookOpen className="h-12 w-12 sm:h-16 sm:w-16 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-lg sm:text-xl font-semibold mb-2">No Quiz History</h3>
             <p className="text-sm sm:text-base text-muted-foreground mb-4">
-              You haven't completed any quizzes yet. Start taking quizzes to see your progress here!
+              You haven&apos;t completed any quizzes yet. Start taking quizzes to see your progress here!
             </p>
             <Link 
               href="/dashboard" 

@@ -11,7 +11,7 @@ import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
 import { handleGenericError } from '@/lib/error-handling';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
-import { Trophy, Users, TrendingUp, Award, Clock, Target, Star, Zap, Share2, Copy, Check } from 'lucide-react';
+import { Trophy, Users, TrendingUp, Award, Clock, Target, Star, Zap, Share2, Copy, Check, BookOpen } from 'lucide-react';
 import { PageLayout } from '@/components/layout/page-layout';
 
 export default function ResultsPage() {
@@ -129,17 +129,25 @@ export default function ResultsPage() {
     ? (validResults.filter(r => (r.score || 0) >= 70).length / validResults.length) * 100
     : 0;
 
+  // Fix score distribution calculation
   const scoreDistribution = validResults.reduce((acc, r) => {
     const score = r.score || 0;
     const scoreBand = Math.floor(score / 10) * 10;
-    const band = `${scoreBand}-${scoreBand + 9}%`;
+    const band = `${scoreBand}-${scoreBand + 9}`;
     acc[band] = (acc[band] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
 
-  const chartData = Object.entries(scoreDistribution)
-    .map(([name, count]) => ({ name, count, percentage: (count / results.length) * 100 }))
-    .sort((a, b) => parseInt(a.name) - parseInt(b.name));
+  // Create complete score bands including empty ones
+  const allBands = Array.from({ length: 11 }, (_, i) => `${i * 10}-${i * 10 + 9}`);
+  const chartData = allBands.map(band => {
+    const count = scoreDistribution[band] || 0;
+    return {
+      name: `${band}%`,
+      count,
+      percentage: validResults.length > 0 ? (count / validResults.length) * 100 : 0
+    };
+  }).filter(item => item.count > 0 || validResults.length === 0);
     
   const pieData = [
     { name: 'Excellent (90-100%)', value: validResults.filter(r => (r.score || 0) >= 90).length, color: '#10B981' },
@@ -176,13 +184,23 @@ export default function ResultsPage() {
             <Target className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
             {results.length} Participants
           </Badge>
-          <button 
-            onClick={shareQuizResults}
-            className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 text-xs sm:text-sm bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded-lg transition-all duration-200 w-full sm:w-auto touch-manipulation"
-          >
-            {copied ? <Check className="w-3 w-3 sm:w-4 sm:h-4" /> : <Share2 className="w-3 h-3 sm:w-4 sm:h-4" />}
-            {copied ? "Copied!" : "Share Results"}
-          </button>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <button 
+              onClick={shareQuizResults}
+              className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 text-xs sm:text-sm bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded-lg transition-all duration-200 w-full sm:w-auto touch-manipulation"
+            >
+              {copied ? <Check className="w-3 w-3 sm:w-4 sm:h-4" /> : <Share2 className="w-3 h-3 sm:w-4 sm:h-4" />}
+              {copied ? "Copied!" : "Share Results"}
+            </button>
+            
+            <a 
+              href={`/quiz/${quizId}/answers`}
+              className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 text-xs sm:text-sm bg-green-500/10 hover:bg-green-500/20 text-green-400 border border-green-500/30 rounded-lg transition-all duration-200 w-full sm:w-auto touch-manipulation"
+            >
+              <BookOpen className="w-3 h-3 sm:w-4 sm:h-4" />
+              Show Answers
+            </a>
+          </div>
         </div>
       </div>
 
@@ -291,33 +309,39 @@ export default function ResultsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={250}>
-              <PieChart>
-                <Pie
-                  data={pieData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percentage }) => `${name}: ${percentage?.toFixed(1)}%`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                  className="text-xs"
-                >
-                  {pieData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: 'hsl(var(--card))',
-                    border: '1px solid hsl(var(--border))',
-                    borderRadius: '12px',
-                    boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'
-                  }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
+            {pieData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={250}>
+                <PieChart>
+                  <Pie
+                    data={pieData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, percentage }) => `${name}: ${percentage?.toFixed(1)}%`}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                    className="text-xs"
+                  >
+                    {pieData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: 'hsl(var(--card))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '12px',
+                      boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'
+                    }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-64">
+                <p className="text-muted-foreground">No performance data available</p>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
