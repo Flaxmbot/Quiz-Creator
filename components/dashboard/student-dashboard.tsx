@@ -92,7 +92,7 @@ export function StudentDashboard({ className }: StudentDashboardProps) {
   useEffect(() => {
     console.log("StudentDashboard useEffect triggered");
     fetchData();
-  }, [user]);
+  }, [user, fetchData]);
 
   const hasUserTakenQuiz = (quizId: string) => {
     return userSubmissions.some(submission => submission.quizId === quizId);

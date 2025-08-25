@@ -10,8 +10,8 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
 import { handleGenericError } from '@/lib/error-handling';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
-import { Trophy, Users, TrendingUp, Award, Clock, Target, Star, Zap, Share2, Copy, Check, BookOpen } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { Trophy, Users, TrendingUp, Award, Target, Star, Zap, Share2, Check, BookOpen } from 'lucide-react';
 import { PageLayout } from '@/components/layout/page-layout';
 
 export default function ResultsPage() {
@@ -23,7 +23,7 @@ export default function ResultsPage() {
   const { toast } = useToast();
 
   // Helper function to safely convert submittedAt to Date
-  const getSubmittedDate = (submittedAt: Date | any) => {
+  const getSubmittedDate = (submittedAt: Date | { toDate: () => Date }) => {
     if (submittedAt instanceof Date) {
       return submittedAt;
     }
@@ -46,8 +46,8 @@ export default function ResultsPage() {
         ]);
         setQuiz(quizData);
         setResults(resultsData);
-      } catch (error) {
-        const appError = handleGenericError(error);
+      } catch (err) {
+        const appError = handleGenericError(err);
         toast({
           variant: 'destructive',
           title: 'Error loading results',
@@ -71,9 +71,9 @@ export default function ResultsPage() {
         description: "Quiz results link has been copied to your clipboard.",
       });
       setTimeout(() => setCopied(false), 2000);
-    } catch (error) {
+    } catch (err) {
       toast({
-        variant: "destructive", 
+        variant: "destructive",
         title: "Copy Failed",
         description: "Failed to copy results link to clipboard.",
       });
@@ -108,7 +108,7 @@ export default function ResultsPage() {
           <Card className="futuristic-card p-8 text-center">
             <CardContent>
               <h2 className="text-2xl font-bold text-muted-foreground mb-2">Quiz Not Found</h2>
-              <p className="text-muted-foreground">The quiz you're looking for doesn't exist or has been removed.</p>
+              <p className="text-muted-foreground">The quiz you&#39;re looking for doesn&#39;t exist or has been removed.</p>
             </CardContent>
           </Card>
         </div>
@@ -123,7 +123,6 @@ export default function ResultsPage() {
     : 0;
 
   const maxScore = validResults.length > 0 ? Math.max(...validResults.map(r => r.score || 0)) : 0;
-  const minScore = validResults.length > 0 ? Math.min(...validResults.map(r => r.score || 0)) : 0;
 
   const passRate = validResults.length > 0
     ? (validResults.filter(r => (r.score || 0) >= 70).length / validResults.length) * 100
@@ -147,14 +146,14 @@ export default function ResultsPage() {
       count,
       percentage: validResults.length > 0 ? (count / validResults.length) * 100 : 0
     };
-  }).filter(item => item.count > 0 || validResults.length === 0);
+  });
     
   const pieData = [
     { name: 'Excellent (90-100%)', value: validResults.filter(r => (r.score || 0) >= 90).length, color: '#10B981' },
     { name: 'Good (80-89%)', value: validResults.filter(r => (r.score || 0) >= 80 && (r.score || 0) < 90).length, color: '#3B82F6' },
     { name: 'Average (70-79%)', value: validResults.filter(r => (r.score || 0) >= 70 && (r.score || 0) < 80).length, color: '#F59E0B' },
     { name: 'Below Average (<70%)', value: validResults.filter(r => (r.score || 0) < 70).length, color: '#EF4444' }
-  ].filter(item => item.value > 0);
+  ];
   
   const getScoreColor = (score: number) => {
     if (score >= 90) return 'text-green-400';
@@ -309,39 +308,33 @@ export default function ResultsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {pieData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={250}>
-                <PieChart>
-                  <Pie
-                    data={pieData}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, percentage }) => `${name}: ${percentage?.toFixed(1)}%`}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                    className="text-xs"
-                  >
-                    {pieData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: 'hsl(var(--card))',
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '12px',
-                      boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'
-                    }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="flex items-center justify-center h-64">
-                <p className="text-muted-foreground">No performance data available</p>
-              </div>
-            )}
+            <ResponsiveContainer width="100%" height={250}>
+              <PieChart>
+                <Pie
+                  data={pieData.filter(item => item.value > 0)}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percentage }) => `${name}: ${percentage?.toFixed(1)}%`}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                  className="text-xs"
+                >
+                  {pieData.filter(item => item.value > 0).map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: 'hsl(var(--card))',
+                    border: '1px solid hsl(var(--border))',
+                    borderRadius: '12px',
+                    boxShadow: '0 8px 32px rgba(31, 38, 135, 0.37)'
+                  }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
           </CardContent>
         </Card>
       </div>

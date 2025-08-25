@@ -44,7 +44,7 @@ export function AISuggestionDialog({
         <div className="grid gap-4 sm:gap-6 py-4">
           <div className="space-y-2">
             <h4 className="font-semibold text-foreground text-sm sm:text-base">Enhanced Wording</h4>
-            <p className="text-xs sm:text-sm text-muted-foreground">Original: "{originalQuestion}"</p>
+            <p className="text-xs sm:text-sm text-muted-foreground">Original: &quot;{originalQuestion}&quot;</p>
             <div className="p-3 sm:p-4 bg-primary/10 rounded-md border border-primary/20 relative group">
               <p className="text-foreground text-sm sm:text-base">{suggestions.enhancedWording}</p>
               <Button

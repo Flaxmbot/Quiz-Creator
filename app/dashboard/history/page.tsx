@@ -58,7 +58,7 @@ export default function QuizHistoryPage() {
 
   useEffect(() => {
     fetchSubmissions();
-  }, [user]);
+  }, [user, fetchSubmissions]);
 
   const getScoreColor = (score: number) => {
     if (score >= 90) return 'text-green-400';
@@ -235,6 +235,16 @@ export default function QuizHistoryPage() {
                     <Badge variant="outline" className="text-xs">
                       {submission.quiz.category}
                     </Badge>
+                  )}
+                  
+                  {submission.quiz?.showCorrectAnswers && (
+                    <a
+                      href={`/quiz/${submission.quizId}/answers`}
+                      className="inline-flex items-center justify-center gap-2 px-3 py-1.5 text-xs bg-green-500/10 hover:bg-green-500/20 text-green-400 border border-green-500/30 rounded-lg transition-all duration-200 w-full touch-manipulation"
+                    >
+                      <BookOpen className="w-3 h-3" />
+                      Show Answers
+                    </a>
                   )}
                 </CardContent>
               </Card>

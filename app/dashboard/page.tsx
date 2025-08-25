@@ -86,7 +86,7 @@ export default function DashboardPage() {
     if (!loading) {
       fetchData();
     }
-  }, [user, loading]);
+  }, [user, loading, fetchData]);
 
   const handleDeleteQuiz = async (quizId: string) => {
     if (!user) return;
